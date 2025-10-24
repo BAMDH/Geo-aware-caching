@@ -1,0 +1,19 @@
+name: dns-interceptor
+replicaCount: 1  # Número de pods
+image:
+  repository: kendallrc/dns-interceptor
+  tag: latest
+
+service:
+  type: NodePort
+  port: 53
+  protocol: UDP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 250m
+    memory: 128Mi
+

@@ -1,0 +1,25 @@
+# Imagen base con gcc
+FROM ubuntu:22.04
+
+# Evitar preguntas durante instalación
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar gcc, herramientas, OpenSSL y libcurl
+RUN apt-get update && \
+    apt-get install -y gcc build-essential libssl-dev libcurl4-openssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de la app
+WORKDIR /app
+
+# Copiar archivos de la app
+COPY . /app
+
+# Compilar el programa
+RUN gcc -o interceptor main.c base_64.c api.c dns_manager.c server.c -lcurl -lssl -lcrypto -lpthread
+
+# Exponemos el puerto del interceptor
+EXPOSE 53
+
+# Comando por defecto
+CMD ["./interceptor"]

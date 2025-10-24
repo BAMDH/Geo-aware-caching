@@ -1,0 +1,9 @@
+Compilar el main
+
+gcc main.c -o interceptor -lssl -lcrypto -lcurl -lcjson
+
+Correr el ejecutable
+
+./interceptor
+
+Cambiar host.docker.internal a localhost
