@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ .Values.name }}
 spec:
-  replicas: 1 
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ .Values.name }}
@@ -16,6 +16,7 @@ spec:
         options:
           - name: ndots
             value: "1"
+      hostNetwork: true 
       containers:
         - name: {{ .Values.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

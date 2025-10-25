@@ -1,0 +1,8 @@
+services:
+  zonal_cache:
+    build: .
+    container_name: zonal_cache
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+   

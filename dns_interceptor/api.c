@@ -19,33 +19,15 @@ char* call_api(params_t *params, const char* endpoint, const char* method) {
     char host[] = "dns-api-sv"; // host.docker.internal
     char port[] = "5000";
 
-    if (strcasecmp(method, "POST") == 0) {
-        snprintf(body, sizeof(body),
-            "{ \"dns_encoded\": \"%s\" }",
-            params->dns_encoded);
-        printf("El body a enviar es %s", body);
-        
-    }
-
     if (strcasecmp(method, "GET") == 0) {
-        snprintf(url, sizeof(url), "http://%s:%s/%s/%s/%s",
-                 host, port, endpoint, params->hostname, params->ip_source);
+        snprintf(url, sizeof(url), "http://%s:%s/%s/%s",
+                 host, port, endpoint, params->ip_source);
         printf("\nSe envia a la API el url: %s", url);
     
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
     } 
-    else if (strcasecmp(method, "POST") == 0) {
-        snprintf(url, sizeof(url), "http://%s:%s/%s", host, port, endpoint);
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(body));
 
-        struct curl_slist *headers = NULL;
-        headers = curl_slist_append(headers, "Content-Type: application/json");
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    } 
     else {
         curl_easy_cleanup(curl);
         return NULL;
@@ -76,7 +58,7 @@ char* call_api(params_t *params, const char* endpoint, const char* method) {
 
     if (http_code == 404) {
         free(response);
-        return strdup("Unknown");
+        return NULL;
     }
 
     return response;

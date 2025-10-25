@@ -29,24 +29,10 @@ void* handle_client(void* arg) {
             client_ip, ntohs(targ->client_addr.sin_port), targ->len);
     fflush(stdout);
 
-    // Leer QR y OPCODE desde buffer[2]
-    unsigned int number = targ->buffer[2];
-    unsigned int qr = (number << 24) >> 31;         
-    unsigned int opcode = (number << 25) >> 28;    
-
     // char para obtener la respuesta
     dns_response_t response;
 
-    if(qr == 0 && opcode == 0) {
-        // Si el paquete es estandar
-        // Se le envia el paquete dns y el largo del paquete
-        response = handle_query_standar(targ->buffer, targ->len, client_ip);
-    }
-    else{
-        // El paquete no es estandar
-        // Se le envia el paquete dns y el largo del paquete
-        response = handle_non_query_standar(targ->buffer, targ->len);
-    }
+    response = handle_dns(targ->buffer, targ->len, client_ip);
 
     // Se envia la respuesta
     send_response(targ->sockfd, response.buffer, response.length,
@@ -54,8 +40,8 @@ void* handle_client(void* arg) {
 
     free(targ); // liberar memoria del argumento
 
+   
     if(response.buffer != NULL){
-
         free(response.buffer); // liberar memoria de la respuesta
     }
     

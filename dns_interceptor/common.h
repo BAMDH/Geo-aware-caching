@@ -15,7 +15,6 @@
 
 #define PORT 53       // Puerto de prueba (evita 53)
 #define BUFFER_SIZE 512  // Tamaño típico de paquete DNS
-#define MAX_HOSTNAME 256
 
 // --- Struct para el threat que maneja el cliente ---
 typedef struct {
@@ -28,11 +27,8 @@ typedef struct {
 
 // --- Struct para los parametros que se envian a la api ---
 typedef struct {
-    char* hostname;
     char* ip_source;
-    char* dns_encoded;
 } params_t;
-
 
 typedef struct {
     unsigned char *buffer;

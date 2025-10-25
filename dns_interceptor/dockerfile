@@ -16,7 +16,7 @@ WORKDIR /app
 COPY . /app
 
 # Compilar el programa
-RUN gcc -o interceptor main.c base_64.c api.c dns_manager.c server.c -lcurl -lssl -lcrypto -lpthread
+RUN gcc -o interceptor main.c api.c dns_manager.c server.c -lcurl -lssl -lcrypto -lpthread
 
 # Exponemos el puerto del interceptor
 EXPOSE 53

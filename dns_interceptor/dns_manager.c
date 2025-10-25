@@ -1,175 +1,123 @@
 #include "dns_manager.h"
-#include "base_64.h"
 #include "api.h"
 
-//////////////////////////////// Leer Paquete DNS /////////////////////////////////////
+//////////////////////////////// Funciones DNS /////////////////////////////////////
 
-// --- Extrae el host DNS (QNAME) desde el buffer ---
-int extract_host(const unsigned char *buffer, ssize_t len, char *out) {
-        
-    if(len < 12) return -1; // paquete demasiado corto (header incompleto)
-    
-    const unsigned char *ptr = buffer + 12; // inicio de QNAME segun el protocolo RFC1035
-    const unsigned char *end = buffer + len; // Fin de QNAME
-    size_t pos = 0;
+// Función para construir el paquete DNS de respuesta a partir de un query y una IP
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <arpa/inet.h> // inet_pton
 
-    while(ptr < end) {
-
-        unsigned int label_len = *ptr;
-
-        //Label_len indica la cantidad de bytes antes del siguiente .
-        // Ejemplo: 3www6prueba3com
-        // Label: 3, 6, 3
-
-        if(label_len == 0) { // fin del QNAME
-            if(pos > 0) out[pos-1] = '\0'; // quitar el último punto
-            else out[0] = '\0';
-            return 0;
-        }
-
-        ptr++; // mover al primer caracter del label
-
-        // ptr apunta a los caracteres: www, prueba, com
-
-        if(ptr + label_len > end){
-            return -2; // paquete truncado
-        }
-        if(pos + label_len + 1 >= MAX_HOSTNAME){
-            return -3; // buffer de salida pequeño
-        }
-
-        // copiar el label
-        for(unsigned int i = 0; i < label_len; i++) {
-            out[pos] = (char)(*ptr);
-            pos++;
-            ptr++;
-        }
-
-        out[pos] = '.'; // separar labels
-        pos++;
+unsigned char* build_dns(unsigned char *query, size_t query_len,
+                         const char *ip_str, size_t *out_len)
+{
+    if (!query || !ip_str) {
+        printf("[ERROR] Parámetros inválidos en build_dns()\n");
+        return NULL;
     }
 
-    return -4; // formato inválido
-}
+    printf("[INFO] Construyendo respuesta DNS para IP: %s\n", ip_str);
+    printf("[DEBUG] Longitud del query: %zu bytes\n", query_len);
 
-// Función para construir el paquete dns de respuesta
-unsigned char* build_dns_reply_buffer(unsigned char *query, size_t query_len,
-                                      unsigned char *response, size_t response_len,
-                                      size_t *out_len)
-{
-    // Calcular longitud total
-    size_t total_len = query_len + response_len;
-    
-    // Reservar memoria dinámica
+    // Longitud base
+    size_t question_len = query_len - 12;
+    size_t answer_len = 16; // 12 bytes + 4 de IP
+    size_t total_len = 12 + question_len + answer_len;
+
+    printf("[DEBUG] Longitud pregunta: %zu bytes\n", question_len);
+    printf("[DEBUG] Longitud respuesta: %zu bytes\n", answer_len);
+    printf("[DEBUG] Longitud total: %zu bytes\n", total_len);
+
     unsigned char *buffer = malloc(total_len);
-    if (!buffer) return NULL;
+    if (!buffer) {
+        printf("[ERROR] Fallo al asignar memoria\n");
+        return NULL;
+    }
 
-    // Copiar header
+    // --- Header ---
     memcpy(buffer, query, 12);
+    printf("[DEBUG] Copiado header original (12 bytes)\n");
 
     // Modificar flags: QR=1 (respuesta)
     buffer[2] |= 0x80; // QR=1
     buffer[3] &= 0x0F; // RCODE=0
+    printf("[DEBUG] Flags modificadas: QR=1, RCODE=0\n");
 
     // Ajustar counts: ANCOUNT=1, NSCOUNT=0, ARCOUNT=0
-    buffer[6] = 0x00;
-    buffer[7] = 0x01;
+    buffer[6] = 0x00; buffer[7] = 0x01;
     buffer[8] = buffer[9] = buffer[10] = buffer[11] = 0x00;
+    printf("[DEBUG] ANCOUNT=1, NSCOUNT=0, ARCOUNT=0\n");
 
-    // Copiar pregunta
-    size_t question_len = query_len - 12;
+    // --- Pregunta ---
     memcpy(buffer + 12, query + 12, question_len);
+    printf("[DEBUG] Copiada sección de pregunta (%zu bytes)\n", question_len);
 
-    // Copiar respuesta
-    memcpy(buffer + 12 + question_len, response, response_len);
+    // --- Respuesta ---
+    unsigned char *ans_ptr = buffer + 12 + question_len;
+    printf("[DEBUG] Offset de respuesta: %ld\n", ans_ptr - buffer);
+
+    // Nombre (puntero)
+    ans_ptr[0] = 0xC0;
+    ans_ptr[1] = 0x0C;
+
+    // Tipo A (0x0001)
+    ans_ptr[2] = 0x00;
+    ans_ptr[3] = 0x01;
+
+    // Clase IN (0x0001)
+    ans_ptr[4] = 0x00;
+    ans_ptr[5] = 0x01;
+
+    // TTL (300 seg)
+    ans_ptr[6] = 0x00;
+    ans_ptr[7] = 0x00;
+    ans_ptr[8] = 0x01;
+    ans_ptr[9] = 0x2C;
+
+    // RDLENGTH = 4 bytes
+    ans_ptr[10] = 0x00;
+    ans_ptr[11] = 0x04;
+
+    // RDATA = dirección IP
+    struct in_addr ip;
+    if (inet_pton(AF_INET, ip_str, &ip) != 1) {
+        printf("[ERROR] IP inválida: %s\n", ip_str);
+        free(buffer);
+        return NULL;
+    }
+    memcpy(ans_ptr + 12, &ip.s_addr, 4);
+
+    unsigned char *ip_bytes = (unsigned char *)&ip.s_addr;
+    printf("[DEBUG] IP codificada: %u.%u.%u.%u\n",
+           ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3]);
 
     if (out_len) *out_len = total_len;
+
+    printf("[INFO] Respuesta DNS construida exitosamente (%zu bytes)\n", total_len);
+    printf("------------------------------------------------------------\n");
+
     return buffer;
 }
 
 //////////////////////////////// Handle Paquetes /////////////////////////////////////
 
-// --- Función que maneja los paquetes no standar (QR != 0 ó OPCODE != 0) ---
-dns_response_t handle_non_query_standar(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns){
-
-    // Codificar en Base64
-    char *dns_base64 = base64_encode(dns_packet, len_dns);
-
-    params_t params;
-    params.dns_encoded = strdup(dns_base64);
-
-    printf("El parametro de api es en dns resolver %s", params.dns_encoded);
-    fflush(stdout);
-  
-    char endpoint[] = "api/dns_resolver"; // Endpoint a consultar
-
-    char* response_api = call_api(&params, endpoint, "POST");
-
-    free(params.dns_encoded);
-
-    printf("El response de api es en dns resolver %s", response_api);
-    fflush(stdout);
-
-    char* response = NULL;
-
-    dns_response_t dns_response = { .buffer = NULL, .length = 0 }; 
-
-    size_t len_response;
-
-    // Hubo un error al llamar la API
-    if (response_api == NULL) {
-        printf("Hubo un error\n");
-        
-    } 
-    
-    // API con error 404
-    else if(strcmp(response_api, "Unknown") == 0){
-
-        free(response_api);
-        printf("No hay registro\n");
-        
-    }
-    
-    // API retornó correctamente
-    else {
-        // Se decodifica
-        response = base64_decode(response_api, &len_response);  
-        free(response_api);
-        dns_response.buffer = response;
-        dns_response.length = len_response;
-
-    }
-
-    free(dns_base64);
-   
-    return dns_response;
-
-}
-
 // --- Función que maneja los paquetes standar (QR = 0 y OPCODE = 0) ---
-dns_response_t handle_query_standar(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns, char* ip_source){
-
-    char hostname[MAX_HOSTNAME];
-    
-    extract_host(dns_packet, len_dns, hostname);
+dns_response_t handle_dns(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns, char* ip_source){
 
     params_t params;
-    params.hostname = strdup(hostname);  // copia segura en heap
     params.ip_source = strdup(ip_source); // copia segura si es necesario
 
-    printf("\nEl hostname es %s", hostname);  
+    char endpoint[] = "interceptor/zonal_cache"; // Endpoint a consultar
 
-    char endpoint[] = "api/exists"; // Endpoint a consultar
+    //char* response_api = call_api(&params, endpoint, "GET");
 
-    char* response_api = call_api(&params, endpoint, "GET");
+    char *response_api = "89.233.29.12";
 
-    printf("El response de api desde exists es %s", response_api);
+    printf("El response de api es %s", response_api);
     fflush(stdout);
 
-    free(params.hostname);
     free(params.ip_source);
-
-    char* response = NULL;
 
     dns_response_t dns_response = { .buffer = NULL, .length = 0 }; // al declarar
 
@@ -180,34 +128,22 @@ dns_response_t handle_query_standar(unsigned char dns_packet[BUFFER_SIZE], ssize
         printf("Hubo un error\n");
         return dns_response;
     }
-    // La API no encontró el host
-    else if(strcmp(response_api, "Unknown") == 0){
-        printf("La API no lo encontro\n");
-        dns_response = handle_non_query_standar(dns_packet, len_dns);
-        
-    }
     // La API encontró el host satisfactoriamente
     else{
-        response = base64_decode(response_api, &len_response);
-
-        printf("El response de api desde exists es %s", response);
-        fflush(stdout);
-
-        dns_response.buffer = build_dns_reply_buffer(dns_packet, len_dns, response, len_response,
-             &dns_response.length);
+        dns_response.buffer = build_dns(dns_packet, len_dns, response_api, 
+            &dns_response.length);
 
         printf("Response DNS (hex): ");
         for (size_t i = 0; i < dns_response.length; i++) {
             printf("%02X ", dns_response.buffer[i]);
+            fflush(stdout);
         }
-        printf("\n");
-        fflush(stdout);
-                
+    
     }
    
     // Liberar memoria
 
-    free(response_api);
+    //free(response_api);
   
     return dns_response;
 
