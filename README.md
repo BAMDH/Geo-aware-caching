@@ -11,7 +11,7 @@ Parameters:
 
 Returns: Retorna el tipo de autenticacion del dominio en firebase (api-key ó user-password)
 
-2. domain/validate/key_session?session_id=%s / domain/validate/key_session?api_key=%s
+2. domain/validate/key_session?session_id=%s / domain/validate/key_session/?api_key=%s
 
 Method: GET
 
@@ -21,7 +21,7 @@ Parameters: Recibe uno de los 2 parametros
 
 Returns: Retorna True o False, dependiendo de si el session key o el api key son validos
 
-3. domain/ip/?domain=%s?subdomain=%s
+3. domain/ip?domain=%s?subdomain=%s
 
 Method: GET
 

@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Instalar gcc, herramientas, OpenSSL y libcurl
 RUN apt-get update && \
-    apt-get install -y gcc build-essential libssl-dev libcurl4-openssl-dev && \
+    apt-get install -y gcc build-essential libssl-dev libcurl4-openssl-dev libjson-c-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Crear directorio de la app
@@ -16,7 +16,7 @@ WORKDIR /app
 COPY . /app
 
 # Compilar el programa
-RUN gcc -o zonal_cache main.c server.c auth.c -lcurl -lssl -lcrypto -lpthread
+RUN gcc -o zonal_cache main.c server.c auth.c api.c json.c -lcurl -lssl -lcrypto -lpthread -ljson-c
 
 # Exponemos el puerto del interceptor
 EXPOSE 8080

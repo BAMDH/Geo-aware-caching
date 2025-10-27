@@ -30,18 +30,16 @@ unsigned char* base64_decode(const char* input, size_t* out_len) {
 
 // Extrae el session_id del header Authorization: Bearer <session_id> o 
 // el api key del header 
-char* extract_key_session(const char *buf, size_t len, char* type) {
+int extract_key_session(const char *buf, size_t len, const char* type, char *out, 
+                            size_t out_size) {
 
     const char *prefix;
-    size_t size_var;
 
-    if(strcmp(type, "api-key")){
+    if(strcmp(type, "x-api-key") == 0){
         prefix = "x-api-key:";
-        size_var = API_KEY_SIZE;
     }
-    else{
+    else {
         prefix = "Authorization: Bearer ";
-        size_var = SESSION_ID_SIZE;
     }
 
     size_t prefix_len = strlen(prefix);
@@ -54,28 +52,25 @@ char* extract_key_session(const char *buf, size_t len, char* type) {
                 break;
             }
         }
+
         if (match) {
             size_t pos = i + prefix_len;
             while (pos < len && buf[pos] == ' ') pos++;  // saltar espacios
 
-            // copiar session_id hasta fin de línea o tamaño máximo
-            char *key_session = malloc(size_var);
-            if (!key_session) return NULL;
-
             size_t k = 0;
-            while (pos + k < len && buf[pos + k] != '\r' && buf[pos + k] != '\n' && k < size_var - 1) {
-                key_session[k] = buf[pos + k];
+            while (pos + k < len && buf[pos + k] != '\r' && buf[pos + k] != '\n' && k < out_size - 1) {
+                out[k] = buf[pos + k];
                 k++;
             }
-            key_session[k] = '\0';
+            out[k] = '\0';
 
-            printf("Session ID o api key extraído: %s\n", key_session);
+            printf("[extract_key_session] %s extraído: '%s'\n", type, out);
             fflush(stdout);
-            return key_session;
+            return 1;  // éxito
         }
     }
 
-    printf("No se encontró cabecera Authorization: Session\n");
+    printf("[extract_key_session] No se encontró la cabecera %s\n", type);
     fflush(stdout);
-    return NULL;
+    return -1; // no encontrado
 }

@@ -10,11 +10,11 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
 
 // --- Función para enviar solicitud a la API con método GET o POST ---
 // Retorna Unknown si la respuesta HTTP es 404
-char* call_api(params_t *params, const char* endpoint, const char* method) {
+char* call_api(params_t *params, const char* endpoint) {
     CURL *curl = curl_easy_init();
     if (!curl) return NULL;
 
-    char url[512];
+    char url[1024];
     char body[2048] = ""; // para POST
    
     // Se llama al metodo GET tipo de autenticacion del dominio
@@ -32,19 +32,29 @@ char* call_api(params_t *params, const char* endpoint, const char* method) {
 
         // Caso para enviar api key
         if (params->session_id != NULL)
-            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?session_id=%s",
-                    HOST_API, PORT_API, params->session_id);
+            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?domain=%s?subdomain=%s?session_id=%s",
+                    HOST_API, PORT_API, params->domain, params->subdomain, params->session_id);
 
         // Caso para enviar session id
         else
-            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?api_key=%s",
-                    HOST_API, PORT_API, params->api_key);
+            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?domain=%s?subdomain=%s?api_key=%s",
+                    HOST_API, PORT_API, params->domain, params->subdomain, params->api_key);
 
         printf("\nSe envia a la API el url: %s", url);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
     }
+
+    // Se llama al metodo GET IP del dominio
+    if (strcasecmp(endpoint, "domain/ip") == 0) {
+        snprintf(url, sizeof(url), "http://%s:%s/domain/ip?domain=%s?subdomain=%s",
+                HOST_API, PORT_API, params->domain, params->subdomain);
+        printf("\nSe envia a la API el url: %s", url);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    } 
 
 
     else {

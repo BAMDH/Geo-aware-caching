@@ -14,10 +14,6 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Permitir reusar la dirección
-    int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
     // Configurar dirección del servidor
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -30,25 +26,37 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (listen(sockfd, 5) < 0) {
+    if (listen(sockfd, 10) < 0) {
         perror("Error listen");
         close(sockfd);
         exit(EXIT_FAILURE);
     }
 
     printf("Servidor TCP escuchando en el puerto %d...\n", PORT);
+    fflush(stdout);
+
 
     while (1) {
         int client_fd = accept(sockfd, (struct sockaddr*)&client_addr, &client_len);
         if (client_fd < 0) {
             perror("Error accept");
+            fflush(stdout);
+            continue;
+        }
+
+        char buffer[BUFFER_SIZE];
+        ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (bytes_read <= 0) {
+            close(client_fd);
             continue;
         }
 
         thread_arg_t *targ = malloc(sizeof(thread_arg_t));
         targ->client_fd = client_fd;
         targ->client_addr = client_addr;
-
+        targ->len = bytes_read;
+        memcpy(targ->buffer, buffer, bytes_read);
+        
         pthread_t tid;
         pthread_create(&tid, NULL, handle_client, targ);
         pthread_detach(tid);
