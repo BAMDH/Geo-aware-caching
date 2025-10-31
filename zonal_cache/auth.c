@@ -74,3 +74,5 @@ int extract_key_session(const char *buf, size_t len, const char* type, char *out
     fflush(stdout);
     return -1; // no encontrado
 }
+
+

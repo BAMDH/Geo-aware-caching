@@ -49,6 +49,9 @@ void* handle_client(void* arg) {
     printf("Cliente conectado: %s:%d\n", client_ip, ntohs(targ->client_addr.sin_port));
     fflush(stdout);
 
+    printf("LA API KEY OBTENIDA DESDE MAIN ES DE %s", cache_api_key);
+    fflush(stdout);
+
     int key_session = 0;
 
     char* response_api = NULL;

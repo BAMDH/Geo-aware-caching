@@ -25,6 +25,8 @@
 #define MAX_HOSTNAME 256
 #define TYPE_AUTH 50
 
+extern const char* cache_api_key;  
+
 // --- Struct para el threat que maneja el cliente ---
 
 typedef struct {

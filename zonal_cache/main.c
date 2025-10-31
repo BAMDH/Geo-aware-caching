@@ -3,6 +3,8 @@
 
 ///////////////////////////////// Main ////////////////////////////////////////////
 
+const char* cache_api_key;
+
 int main() {
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
@@ -32,9 +34,16 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    cache_api_key = getenv("SERVICE_API_KEY");
+
     printf("Servidor TCP escuchando en el puerto %d...\n", PORT);
     fflush(stdout);
 
+    printf("Servidor TCP escuchando en el puerto %d...\n", PORT);
+    fflush(stdout);
+
+    printf("LA API KEY OBTENIDA DESDE MAIN ES DE %s", cache_api_key);
+    fflush(stdout);
 
     while (1) {
         int client_fd = accept(sockfd, (struct sockaddr*)&client_addr, &client_len);

@@ -16,7 +16,14 @@ char* call_api(params_t *params, const char* endpoint) {
 
     char url[1024];
     char body[2048] = ""; // para POST
-   
+
+    // --- Agregar header con API key ---
+    struct curl_slist *headers = NULL;
+    char auth_header[128];
+    
+    snprintf(auth_header, sizeof(auth_header), "cache-api-key: %s", cache_api_key);
+    headers = curl_slist_append(headers, auth_header);
+
     // Se llama al metodo GET tipo de autenticacion del dominio
     if (strcasecmp(endpoint, "domain/type_auth") == 0) {
         snprintf(url, sizeof(url), "http://%s:%s/domain/type_auth?domain=%s",
@@ -25,35 +32,52 @@ char* call_api(params_t *params, const char* endpoint) {
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
     } 
 
     // Se llama al metodo GET tipo de autenticacion del dominio
     else if (strcasecmp(endpoint, "domain/validate/key_session") == 0) {
 
+        char auth_client_header[128];
+
         // Caso para enviar api key
-        if (params->session_id != NULL)
-            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?domain=%s?subdomain=%s?session_id=%s",
-                    HOST_API, PORT_API, params->domain, params->subdomain, params->session_id);
+        if (params->session_id != NULL){
+            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/session_id?domain=%s&subdomain=%s",
+                    HOST_API, PORT_API, params->domain, params->subdomain);
+            
+            snprintf(auth_client_header, sizeof(auth_client_header), 
+                        "client-session-id: %s", params->session_id);
+            headers = curl_slist_append(headers, auth_client_header);
+        }
 
         // Caso para enviar session id
-        else
-            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/key_session?domain=%s?subdomain=%s?api_key=%s",
-                    HOST_API, PORT_API, params->domain, params->subdomain, params->api_key);
+        else{
+            snprintf(url, sizeof(url), "http://%s:%s/domain/validate/api_key?domain=%s&subdomain=%s",
+                    HOST_API, PORT_API, params->domain, params->subdomain);
+            snprintf(auth_client_header, sizeof(auth_client_header), 
+                        "client-api-key: %s", params->api_key);
+            headers = curl_slist_append(headers, auth_client_header);
+
+        }
 
         printf("\nSe envia a la API el url: %s", url);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
     }
 
     // Se llama al metodo GET IP del dominio
-    if (strcasecmp(endpoint, "domain/ip") == 0) {
-        snprintf(url, sizeof(url), "http://%s:%s/domain/ip?domain=%s?subdomain=%s",
+    else if (strcasecmp(endpoint, "domain/ip") == 0) {
+        snprintf(url, sizeof(url), "http://%s:%s/domain/ip?domain=%s&subdomain=%s",
                 HOST_API, PORT_API, params->domain, params->subdomain);
         printf("\nSe envia a la API el url: %s", url);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     } 
 
 
@@ -65,9 +89,11 @@ char* call_api(params_t *params, const char* endpoint) {
     // Buffer para recibir la respuesta
     char* response = malloc(8192);
     if (!response) {
+        curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
         return NULL;
     }
+
     response[0] = '\0';
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
@@ -83,6 +109,7 @@ char* call_api(params_t *params, const char* endpoint) {
 
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
     if (http_code == 404) {
