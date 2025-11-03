@@ -1,7 +1,7 @@
 import { verificarToken } from "../utils/jwt.js";
 
 export function requireAuth(req, res, next) {
-    const token = req.cookies.auth_token;
+    let token = req.cookies.auth_token;
     if (!token) {
         // Si no está en cookies se busca en header Authorization
         const authHeader = req.headers['authorization'];

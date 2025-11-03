@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import Dialog from "../components/Dialog";
 import CustomForm from "../components/Form"
 import { API_BASE_URL } from "../constants/api"
 
 const LoginPage = () => {
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false)
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: ""});
 
@@ -33,6 +35,7 @@ const LoginPage = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     user: data.user,
                     password: data.password
@@ -40,10 +43,7 @@ const LoginPage = () => {
             });
 
             if (response.ok) {
-                setInfoDialog({
-                    open: true, title: "Éxito",
-                    message: `Bienvenido de vuelta.`
-                }); // TODO: Redirigir a dashboard
+                navigate("/dashboard");
             } else {
                 const result = await response.json();
                 const errorMessage = result.message || result.error || "El inicio de sesión ha fallado.";
