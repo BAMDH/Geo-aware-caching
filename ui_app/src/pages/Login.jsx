@@ -42,7 +42,7 @@ const LoginPage = () => {
             if (response.ok) {
                 setInfoDialog({
                     open: true, title: "Éxito",
-                    message: `Bienvendido de vuelta.`
+                    message: `Bienvenido de vuelta.`
                 }); // TODO: Redirigir a dashboard
             } else {
                 const result = await response.json();
