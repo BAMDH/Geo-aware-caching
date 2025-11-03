@@ -9,5 +9,6 @@ router.get("/", getDomains);
 router.post("/", createDomain);
 router.delete("/:domainId", deleteDomain);
 router.post("/:domainId/urls", addUrl);
+router.post("/:domainId/create_session", createSession);
 
 export default router;

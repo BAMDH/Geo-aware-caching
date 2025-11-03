@@ -1,4 +1,5 @@
 import { db } from "../utils/firebase.js";
+import crypto from "crypto";
 
 const domainsRef = db.collection("domains");
 
@@ -70,3 +71,37 @@ export async function addUrl(req, res) {
     }
 }
 
+// Crear session_id para un dominio (solo si usa session_id)
+export async function createSession(req, res) {
+    try {
+        const { domainId } = req.params;
+        const { user } = req.body;
+
+        const domainDoc = await domainsRef.doc(domainId).get();
+        if (!domainDoc.exists)
+            return res.status(404).json({ error: "Dominio no encontrado" });
+
+        const domainData = domainDoc.data();
+        if (domainData.type_auth !== "session_id")
+            return res.status(400).json({ error: "Este dominio no usa session_id" });
+
+        const session_id = crypto.randomBytes(24).toString("hex");
+        const newSession = {
+            session_id,
+            user,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        };
+
+        await domainsRef.doc(domainId).collection("sessions").add(newSession);
+
+        res.status(201).json({
+            message: "Sesión creada correctamente",
+            session_id,
+            expiresAt: newSession.expiresAt,
+        });
+    } catch (error) {
+        console.error("Error al crear sesión:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}

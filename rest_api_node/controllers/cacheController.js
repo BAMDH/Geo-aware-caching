@@ -6,36 +6,18 @@ const domainsRef = db.collection("domains");
 export async function getTypeAuth(req, res) {
     try {
         const { domain } = req.query;
-        const snapshot = await domainsRef.where("domain", "==", domain).get();
+        if (!domain) return res.status(400).json({ error: "Falta domain" });
 
+        const snapshot = await domainsRef.where("domain", "==", domain).get();
         if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
 
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-        res.json({ domain, subdomain: data.subdomain || "www", type_auth: data.type_auth });
+        const domainData = snapshot.docs[0].data();
+        res.json({
+            domain: domainData.domain,
+            type_auth: domainData.type_auth,
+        });
     } catch (error) {
         console.error("Error en getTypeAuth:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
-}
-
-// Validar API Key
-export async function validateApiKey(req, res) {
-    try {
-        const { domain, subdomain } = req.query;
-        const apiKey = req.headers["client-api-key"];
-        if (!apiKey) return res.status(400).json({ error: "Falta client-api-key" });
-
-        const snapshot = await domainsRef.where("domain", "==", domain).get();
-        if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
-
-        const doc = snapshot.docs[0];
-        const keysRef = domainsRef.doc(doc.id).collection("api_keys");
-        const keySnap = await keysRef.where("key", "==", apiKey).get();
-
-        res.json({ valid: !keySnap.empty });
-    } catch (error) {
-        console.error("Error en validateApiKey:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
@@ -52,7 +34,10 @@ export async function validateSession(req, res) {
 
         const doc = snapshot.docs[0];
         const sessionsRef = domainsRef.doc(doc.id).collection("sessions");
-        const sessionSnap = await sessionsRef.where("session_id", "==", sessionId).get();
+        const sessionSnap = await sessionsRef
+            .where("session_id", "==", sessionId)
+            .where("expiresAt", ">", new Date())
+            .get();
 
         res.json({ valid: !sessionSnap.empty });
     } catch (error) {
@@ -77,3 +62,22 @@ export async function getDomainIP(req, res) {
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
+
+// Obtener IP de un dominio
+export async function getDomainIP(req, res) {
+    try {
+        const { domain } = req.query;
+        if (!domain) return res.status(400).json({ error: "Falta domain" });
+
+        const snapshot = await domainsRef.where("domain", "==", domain).get();
+        if (snapshot.empty)
+            return res.status(404).json({ error: "Dominio no encontrado" });
+
+        const data = snapshot.docs[0].data();
+        res.json({ domain: data.domain, ip: data.ip });
+    } catch (error) {
+        console.error("Error al obtener IP:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
