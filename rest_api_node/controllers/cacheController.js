@@ -46,23 +46,6 @@ export async function validateSession(req, res) {
     }
 }
 
-// Obtener IP del subdominio
-export async function getDomainIP(req, res) {
-    try {
-        const { domain, subdomain } = req.query;
-        const snapshot = await domainsRef.where("domain", "==", domain).get();
-
-        if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
-
-        const doc = snapshot.docs[0];
-        const data = doc.data();
-        res.json({ ip: data[subdomain]?.ip || data.ip || "0.0.0.0" });
-    } catch (error) {
-        console.error("Error en getDomainIP:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
-}
-
 // Obtener IP de un dominio
 export async function getDomainIP(req, res) {
     try {

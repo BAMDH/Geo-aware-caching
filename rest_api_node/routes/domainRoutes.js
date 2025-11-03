@@ -1,6 +1,6 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { getDomains, createDomain, deleteDomain, addUrl } from "../controllers/domainController.js";
+import { getDomains, createDomain, deleteDomain, addUrl, createSession } from "../controllers/domainController.js";
 
 const router = express.Router();
 

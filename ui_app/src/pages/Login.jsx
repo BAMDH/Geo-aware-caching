@@ -28,7 +28,7 @@ const LoginPage = () => {
     const handleLogin = async (data) => {
         setIsLoading(true)
         try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
+            const response = await fetch(`${API_BASE_URL}/users/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
