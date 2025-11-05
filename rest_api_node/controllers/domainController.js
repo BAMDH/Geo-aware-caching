@@ -105,3 +105,41 @@ export async function createSession(req, res) {
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
+
+// Obtener URLs de un dominio
+export async function getUrls(req, res) {
+    try {
+        const { domainId } = req.params;
+        const urlsSnap = await domainsRef.doc(domainId).collection("urls").get();
+        const urls = urlsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(urls);
+    } catch (error) {
+        console.error("Error al obtener URLs:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// Obtener sesiones activas de un dominio
+export async function getSessions(req, res) {
+    try {
+        const { domainId } = req.params;
+        const sessionsSnap = await domainsRef.doc(domainId).collection("sessions").get();
+        const sessions = sessionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(sessions);
+    } catch (error) {
+        console.error("Error al obtener sesiones:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// Eliminar una sesión
+export async function deleteSession(req, res) {
+    try {
+        const { domainId, sessionId } = req.params;
+        await domainsRef.doc(domainId).collection("sessions").doc(sessionId).delete();
+        res.json({ message: "Sesión eliminada correctamente" });
+    } catch (error) {
+        console.error("Error al eliminar sesión:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}

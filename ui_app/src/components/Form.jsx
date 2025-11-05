@@ -1,4 +1,4 @@
-import * as React from "react"
+import { useState } from "react"
 
 const CustomForm = ({
     fields = [],
@@ -6,9 +6,12 @@ const CustomForm = ({
     onSubmit,
     initialData = {},
     isLoading = false,
+    theme = "dark",
     }) => {
-    const [formValues, setFormValues] = React.useState(initialData)
-    const [passwordVisibility, setPasswordVisibility] = React.useState({})
+    const [formValues, setFormValues] = useState(initialData)
+    const [passwordVisibility, setPasswordVisibility] = useState({})
+
+    const isLight = theme === "light"
 
     const togglePasswordVisibility = (fieldName) => {
         setPasswordVisibility((prev) => ({
@@ -34,14 +37,21 @@ const CustomForm = ({
         <form className="w-full space-y-6" onSubmit={handleSubmit}>
         {isLoading ? (
             <div className="flex justify-center items-center py-12">
-                <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div
+                    className={`w-8 h-8 border-4 rounded-full animate-spin ${
+                    isLight
+                        ? "border-[rgb(28,58,141)] border-t-transparent"
+                        : "border-white border-t-transparent"
+                    }`}
+                ></div>
             </div>
         ) : (
             <>
             {fields.map((field) => (
                 <div key={field.name} className="space-y-2">
                     <div className="flex justify-between items-start">
-                        <label htmlFor={field.name} className="block text-sm font-medium text-white">
+                        <label htmlFor={field.name}
+                            className={`block text-sm font-medium ${isLight ? "text-[rgb(28,58,141)]" : "text-white"}`}>
                         {field.label}
                         </label>
                     </div>
@@ -54,7 +64,11 @@ const CustomForm = ({
                         required={field.required}
                         defaultValue={initialData[field.name]}
                         onChange={handleFieldChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                            isLight
+                            ? "bg-white border-[rgb(28,58,141)]/30 text-[rgb(28,58,141)] placeholder:text-[rgb(28,58,141)]/50 focus:ring-[rgb(28,58,141)]/50"
+                            : "bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:ring-white/30"
+                        }`}
                         rows={4}
                     />
                 ) : field.type === "select" ? (
@@ -64,13 +78,21 @@ const CustomForm = ({
                         required={field.required}
                         defaultValue={initialData[field.name] || ""}
                         onChange={handleFieldChange}
-                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                            isLight
+                            ? "bg-white border-[rgb(28,58,141)]/30 text-[rgb(28,58,141)] focus:ring-[rgb(28,58,141)]/50"
+                            : "bg-white/10 border-white/20 text-white focus:ring-white/30"
+                        }`}
                     >
                         <option value="" disabled>
                             Seleccione una opción
                         </option>
                         {field.options?.map((opt) => (
-                            <option key={opt.value} value={opt.value} className="bg-[rgb(28,58,141)] text-white">
+                            <option key={opt.value} value={opt.value} className={
+                                isLight
+                                ? "bg-white text-[rgb(28,58,141)]"
+                                : "bg-[rgb(28,58,141)] text-white"
+                            }>
                                 {opt.label}
                             </option>
                         ))}
@@ -85,15 +107,23 @@ const CustomForm = ({
                             required={field.required}
                             defaultValue={initialData[field.name]}
                             onChange={handleFieldChange}
-                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
+                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                                isLight
+                                ? "bg-white border-[rgb(28,58,141)]/30 text-[rgb(28,58,141)] placeholder:text-[rgb(28,58,141)]/50 focus:ring-[rgb(28,58,141)]/50"
+                                : "bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:ring-white/30"
+                            }`}
                         />
                         {field.type === "password" && (
                             <button
                                 type="button"
                                 onClick={() => togglePasswordVisibility(field.name)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors focus:outline-none"
+                                className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                                    isLight
+                                    ? "text-[rgb(28,58,141)]/70 hover:text-[rgb(28,58,141)]"
+                                    : "text-white/70 hover:text-white"
+                                } transition-colors focus:outline-none`}
                                 aria-label={passwordVisibility[field.name] ? "Hide password" : "Show password"}
-                                >
+                            >
                                 {passwordVisibility[field.name] ? (
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -136,7 +166,11 @@ const CustomForm = ({
 
             <button
                 type="submit"
-                className="w-full px-6 py-3 bg-white text-[rgb(28,58,141)] font-semibold rounded-lg hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                className={`w-full px-6 py-3 font-semibold rounded-lg focus:outline-none focus:ring-2 transition-all transform hover:scale-[1.02] active:scale-[0.98] ${
+                    isLight
+                    ? "bg-[rgb(28,58,141)] text-white hover:bg-[rgb(25,50,120)] focus:ring-[rgb(28,58,141)]/50 disabled:opacity-60"
+                    : "bg-white text-[rgb(28,58,141)] hover:bg-white/90 focus:ring-white/50 disabled:opacity-60"
+                }`}
             >
                 {submitLabel}
             </button>
