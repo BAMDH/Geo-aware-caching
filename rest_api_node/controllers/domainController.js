@@ -15,25 +15,26 @@ function generateVerificationToken() {
 // 1. Genera el token y guarda el dominio en la db
 export async function addDomain(req, res) {
     try {
-        const { domain, type_auth, cache_size, subdomains } = req.body;
-        if (!domain || !type_auth) return res.status(400).json({ error: "Datos incompletos" });
+        const { domain, txt, cache_size, subdomains } = req.body;
+        if (!domain || !txt) return res.status(400).json({ error: "Datos incompletos" });
+        if (txt.includes(' ')) {
+            return res.status(400).json({ error: "El contenido del record TXT no puede tener espacios en blanco" });
+        }
 
         // Verificar si ya existe (sin importar si está verificado o no)
         const existing = await domainsRef.where("domain", "==", domain).get();
         if (!existing.empty) return res.status(400).json({ error: "Dominio ya registrado o en proceso de registro" });
 
-        const verificationToken = generateVerificationToken();
+        //const verificationToken = generateVerificationToken();
 
         const newDomain = {
             domain: domain.toLowerCase(),
-            type_auth,
+            verificationToken: txt,
             cache_size: cache_size || -1,
             subdomains: subdomains || [],
             userId: req.user.id,
             createdAt: new Date(),
             isVerified: false,
-            verificationToken: verificationToken,
-            //verificationHost: "_check_dns",
         };
 
         const docRef = await domainsRef.add(newDomain);
@@ -41,8 +42,7 @@ export async function addDomain(req, res) {
         // Devuelve el token y el ID para que la UI pueda mostrar las instrucciones
         res.status(201).json({
             id: docRef.id,
-            verificationToken: verificationToken,
-            //verificationHost: newDomain.verificationHost,
+            verificationToken: newDomain.verificationToken,
             message: "Dominio guardado. Por favor, realice la verificación DNS."
         });
 
@@ -62,13 +62,11 @@ export async function verifyDomain(req, res) {
             return res.status(404).json({ error: "Dominio no encontrado o acceso denegado." });
         }
 
-        const { domain, verificationToken, /*verificationHost,*/ isVerified } = domainDoc.data();
+        const { domain, verificationToken, isVerified } = domainDoc.data();
 
         if (isVerified) {
             return res.status(200).json({ message: "Dominio ya verificado." });
         }
-
-        //const hostnameToQuery = `${verificationHost}.${domain}`;
 
         let dnsRecords;
         try {

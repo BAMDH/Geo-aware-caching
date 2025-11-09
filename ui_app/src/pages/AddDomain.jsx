@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import CustomForm from "../components/Form";
-import Dialog from "../components/Dialog"; // Importar Dialog
+import Dialog from "../components/Dialog";
 import { LuArrowLeft, LuCircleCheck, LuCopy } from "react-icons/lu";
 import Layout from "../components/Layout";
-import { API_BASE_URL } from "../constants/api"; // Tu archivo de configuración de API
+import { API_BASE_URL } from "../constants/api";
 
 const AddDomainPage = () => {
     const navigate = useNavigate();
@@ -20,12 +20,11 @@ const AddDomainPage = () => {
             : 1
     );
 
-    // Inicializar el estado de los datos con lo que viene del Dashboard o valores por defecto.
+    // Inicializar el estado de los datos con lo que viene del Dashboard o valores por defecto
     const [formData, setFormData] = useState({
         domainId: initialData.domainId || null,
         domainName: initialData.domainName || '',
         verificationToken: initialData.verificationToken || '',
-        //verificationHost: initialData.verificationHost || '_check_dns',
     });
 
     const [isLoading, setIsLoading] = useState(false);
@@ -33,30 +32,20 @@ const AddDomainPage = () => {
 
     const domainFields = [
         { name: "domain", label: "Dominio", type: "text", placeholder: "ejemplo: domain.duckdns.org", required: true },
-        {
-            name: "type_auth",
-            label: "Tipo de autenticación",
-            type: "select",
-            required: true,
-            options: [
-                { value: "session_id", label: "Session ID" },
-                { value: "api_key", label: "API Key" },
-                { value: "oauth", label: "OAuth" },
-                { value: "basic", label: "Basic Auth" },
-            ],
-        },
+        { name: "txt", label: "Contenido de record TXT", type: "text", placeholder: "ejemplo: HelloWorld", required: true },
         { name: "cache_size", label: "Tamaño de caché (MB)", type: "number", placeholder: "ejemplo: 200", required: true },
-        { name: "subdomains", label: "Subdominios (separados por comas)", type: "text", placeholder: "ejemplo: www, api, cdn", required: false }, // TODO: cambiar la forma en la que se ponen los subdominios, falta el ip
+        { name: "subdomains", label: "Subdominios (separados por comas)", type: "text", placeholder: "ejemplo: www, api, cdn", required: false },
     ];
 
     const handleSubmit = async (data) => {
         setIsLoading(true);
         setInfoDialog({ open: false });
+        setFormData((prev) => ({ ...prev, ...data }));
         try {
             const subdomainsArray = data.subdomains ? data.subdomains.split(",").map((s) => s.trim()).filter(Boolean) : [];
             const domainData = {
                 domain: data.domain,
-                type_auth: data.type_auth,
+                txt: data.txt,
                 cache_size: Number.parseInt(data.cache_size),
                 subdomains: subdomainsArray,
             };
@@ -76,7 +65,6 @@ const AddDomainPage = () => {
                     domainId: result.id,
                     domainName: data.domain,
                     verificationToken: result.verificationToken,
-                    //verificationHost: result.verificationHost,
                 });
                 setStep(2);
             } else {
@@ -102,7 +90,7 @@ const AddDomainPage = () => {
             const result = await response.json();
 
             if (response.ok) {
-                setInfoDialog({ open: true, title: "Éxito", message: "¡Dominio verificado y activado! Redirigiendo...", type: "info" }); // Usamos 'info' para mensaje de éxito
+                setInfoDialog({ open: true, title: "Éxito", message: "¡Dominio verificado y activado! Redirigiendo...", type: "info" });
                 setTimeout(() => navigate("/dashboard"), 1500);
             } else {
                 setInfoDialog({ open: true, title: "Verificación Fallida", message: result.error || "El registro TXT no es visible o el valor es incorrecto. Intente de nuevo en unos minutos.", type: "error" });
@@ -124,7 +112,7 @@ const AddDomainPage = () => {
     const renderStep1 = () => (
         <div className="bg-[rgb(28,58,141)]/5 rounded-xl p-8 border border-[rgb(28,58,141)]/20 text-[rgb(28,58,141)]">
             <h2 className="text-xl font-semibold mb-6">Configuración Inicial</h2>
-            <CustomForm theme="light" fields={domainFields} submitLabel="Crear Dominio y Obtener Token" onSubmit={handleSubmit} isLoading={isLoading} />
+            <CustomForm theme="light" fields={domainFields} submitLabel="Crear dominio" onSubmit={handleSubmit} isLoading={isLoading} initialValues={formData} />
         </div>
     );
 
@@ -134,7 +122,7 @@ const AddDomainPage = () => {
 
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-400 mb-6">
                 <p className="font-medium text-yellow-800">
-                    Acción Requerida: Cree el registro TXT para "{formData.domainName}" en Duck DNS (https://www.duckdns.org/update?domains=YOURVALUE&token=YOURVALUE&txt=YOURVALUE)
+                    Acción Requerida: Cree el registro TXT para "{formData.domainName}" en Duck DNS (https://www.duckdns.org/update?domains=DOMINIO&token=TOKEN&txt={formData.verificationToken})
                 </p>
             </div>
 

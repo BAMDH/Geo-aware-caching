@@ -121,7 +121,7 @@ const Dashboard = () => {
                                 : "bg-yellow-50 border border-yellow-400"
                         }`}>
 
-                        <div className="flex justify-between items-start mb-2">
+                        <div className="flex justify-between items-start mb-4">
                             <h3 className="text-lg font-semibold text-[rgb(28,58,141)]">
                                 {domain.domain}
                             </h3>
@@ -135,13 +135,6 @@ const Dashboard = () => {
                                 </span>
                             )}
                         </div>
-
-                        <p className="text-sm text-[rgb(28,58,141)]/80 mb-4">
-                            Tipo de autenticación:{" "}
-                            <span className="font-medium text-[rgb(28,58,141)]">
-                                {domain.type_auth}
-                            </span>
-                        </p>
 
                         <div className="flex gap-3">
                             {!domain.isVerified ? (

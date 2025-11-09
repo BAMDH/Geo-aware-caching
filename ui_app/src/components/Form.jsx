@@ -63,6 +63,7 @@ const CustomForm = ({
                         placeholder={field.placeholder}
                         required={field.required}
                         defaultValue={initialData[field.name]}
+                        value={formValues[field.name] || ""}
                         onChange={handleFieldChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                             isLight
@@ -77,6 +78,7 @@ const CustomForm = ({
                         name={field.name}
                         required={field.required}
                         defaultValue={initialData[field.name] || ""}
+                        value={formValues[field.name] || ""}
                         onChange={handleFieldChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                             isLight
@@ -106,6 +108,7 @@ const CustomForm = ({
                             placeholder={field.placeholder}
                             required={field.required}
                             defaultValue={initialData[field.name]}
+                            value={formValues[field.name] || ""}
                             onChange={handleFieldChange}
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                                 isLight
