@@ -12,6 +12,11 @@ export async function getTypeAuth(req, res) {
         if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
 
         const domainData = snapshot.docs[0].data();
+
+        if (!domainData.isVerified) {
+            return res.status(403).json({ error: "Dominio no verificado. Configuración no disponible para la caché." });
+        }
+
         res.json({
             domain: domainData.domain,
             type_auth: domainData.type_auth,
@@ -33,6 +38,13 @@ export async function validateSession(req, res) {
         if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
 
         const doc = snapshot.docs[0];
+
+        const domainData = snapshot.docs[0].data();
+
+        if (!domainData.isVerified) {
+            return res.status(403).json({ error: "Dominio no verificado. La validación de sesión no está permitida." });
+        }
+
         const sessionsRef = domainsRef.doc(doc.id).collection("sessions");
         const sessionSnap = await sessionsRef
             .where("session_id", "==", sessionId)
@@ -57,6 +69,10 @@ export async function getDomainIP(req, res) {
             return res.status(404).json({ error: "Dominio no encontrado" });
 
         const data = snapshot.docs[0].data();
+        if (!data.isVerified) {
+            return res.status(403).json({ error: "Dominio no verificado. IP no disponible para el Interceptor DNS." });
+        }
+
         res.json({ domain: data.domain, ip: data.ip });
     } catch (error) {
         console.error("Error al obtener IP:", error);

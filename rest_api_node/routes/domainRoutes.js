@@ -1,6 +1,6 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { getDomains, createDomain, deleteDomain, addUrl, getUrls, createSession, getSessions, deleteSession } from "../controllers/domainController.js";
+import { getDomains, addDomain, verifyDomain, deleteDomain, addUrl, getUrls, createSession, getSessions, deleteSession } from "../controllers/domainController.js";
 
 const router = express.Router();
 
@@ -8,7 +8,8 @@ router.use(requireAuth); // todas requieren autenticación
 
 // Rutas de dominios
 router.get("/", getDomains);
-router.post("/", createDomain);
+router.post("/", addDomain);
+router.post("/:domainId/verify", verifyDomain);
 router.delete("/:domainId", deleteDomain);
 
 // Rutas de URLs dentro de un dominio

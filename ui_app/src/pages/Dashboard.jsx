@@ -1,30 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LuTriangleAlert, LuCircleCheck } from "react-icons/lu";
 import Layout from "../components/Layout";
+import Dialog from "../components/Dialog";
 import { API_BASE_URL } from "../constants/api";
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState("");
     const [domains, setDomains] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [confirmDialog, setConfirmDialog] = useState({open: false, domainId: null, domainName: ""});
+    const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: ""});
 
-    // Obtener datos del usuario y sus dominios
-    useEffect(() => {
+    // Obtener los dominios del usuario
     const fetchDomains = async () => {
+        setIsLoading(true);
         try {
-            // Obtener info del usuario
-            const userRes = await fetch(`${API_BASE_URL}/users/me`, {
-                credentials: "include",
-            });
-            if (userRes.status === 401 || userRes.status === 403) {
-                navigate("/");
-                return;
-            }
-            const userData = await userRes.json();
-            setUser(userData.id);
-
-            // Obtener dominios
             const response = await fetch(`${API_BASE_URL}/domains`, {
                 method: "GET",
                 credentials: "include",
@@ -41,8 +32,64 @@ const Dashboard = () => {
             setIsLoading(false);
         }
     };
-    fetchDomains();
+
+    // Obtener dominios al cargar
+    useEffect(() => {
+        fetchDomains();
     }, [navigate]);
+
+    const handleContinueVerification = (domain) => {
+        // Redirigir a AddDomainPage, pasando los datos necesarios para saltar al Paso 2
+        navigate("/domainAdd", {
+            state: {
+                domainId: domain.id,
+                domainName: domain.domain,
+                verificationToken: domain.verificationToken,
+                //verificationHost: domain.verificationHost
+            }
+        });
+    };
+
+    const handleDeleteDomain = async () => {
+        const { domainId, domainName } = confirmDialog;
+
+        setConfirmDialog({ ...confirmDialog, open: false });
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/domains/${domainId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (response.ok) {
+                setInfoDialog({
+                    open: true, title: "Éxito",
+                    message: `Dominio ${domainName} eliminado correctamente.`
+                });
+                fetchDomains();
+            } else {
+                const error = await response.json();
+                setInfoDialog({
+                    open: true, title: "Error",
+                    message: `Error al eliminar el dominio: ${error.error || 'Ocurrió un error.'}`
+                });
+            }
+        } catch (error) {
+            console.error("Error al eliminar dominio:", error);
+            setInfoDialog({
+                open: true, title: "Error",
+                message: "Error de conexión al intentar eliminar el dominio."
+            });
+        }
+    }
+
+    const openDeleteDialog = (domain) => {
+        setConfirmDialog({
+            open: true,
+            domainId: domain.id,
+            domainName: domain.domain,
+        });
+    }
 
     return (
         <Layout>
@@ -50,7 +97,7 @@ const Dashboard = () => {
                 <h2 className="text-xl font-semibold">Mis dominios</h2>
                 <button
                     className="px-4 py-2 bg-[rgb(28,58,141)] text-white rounded-lg hover:bg-[rgb(25,50,120)] transition-all"
-                    onClick={() => navigate("/domainAdd", { state: { userId: user } })}>
+                    onClick={() => navigate("/domainAdd")}>
                     + Agregar dominio
                 </button>
             </div>
@@ -67,21 +114,46 @@ const Dashboard = () => {
                 {domains.map((domain) => (
                     <div
                         key={domain.id}
-                        className="bg-[rgb(28,58,141)]/10 border border-[rgb(28,58,141)]/20 rounded-xl p-4 hover:bg-[rgb(28,58,141)]/15 transition-all">
-                        <h3 className="text-lg font-semibold mb-2 text-[rgb(28,58,141)]">
-                            {domain.domain}
-                        </h3>
+                        // Estilo basado en el estado de verificación
+                        className={`rounded-xl p-6 transition-all ${
+                            domain.isVerified
+                                ? "bg-green-100/70 border border-green-400"
+                                : "bg-yellow-50 border border-yellow-400"
+                        }`}>
+
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-semibold text-[rgb(28,58,141)]">
+                                {domain.domain}
+                            </h3>
+                            {domain.isVerified ? (
+                                <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-500 text-white font-medium">
+                                    <LuCircleCheck className="w-4 h-4" /> Activo
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-500 text-white font-medium">
+                                    <LuTriangleAlert className="w-4 h-4" /> Pendiente
+                                </span>
+                            )}
+                        </div>
+
                         <p className="text-sm text-[rgb(28,58,141)]/80 mb-4">
                             Tipo de autenticación:{" "}
                             <span className="font-medium text-[rgb(28,58,141)]">
                                 {domain.type_auth}
                             </span>
                         </p>
-                        <div className="flex gap-2">
-                            <button className="flex-1 bg-[rgb(28,58,141)]/20 rounded-lg py-1 hover:bg-[rgb(28,58,141)]/30 transition">
-                                Crear sesión
-                            </button>
-                            <button className="flex-1 bg-red-500/70 text-white rounded-lg py-1 hover:bg-red-600/80 transition">
+
+                        <div className="flex gap-3">
+                            {!domain.isVerified ? (
+                                <button
+                                    onClick={() => handleContinueVerification(domain)}
+                                    className="flex-1 bg-[rgb(28,58,141)] text-white rounded-lg py-1 hover:bg-[rgb(25,50,120)] transition flex items-center justify-center gap-1">
+                                    Completar verificación
+                                </button>
+                            ) : null}
+                            <button
+                                onClick={() => openDeleteDialog(domain)}
+                                className="flex-1 bg-red-600/80 text-white rounded-lg py-1 hover:bg-red-700/80 transition">
                                 Eliminar
                             </button>
                         </div>
@@ -89,6 +161,24 @@ const Dashboard = () => {
                 ))}
                 </div>
             )}
+            <Dialog // Confirm Dialog
+                open={confirmDialog.open}
+                onOpenChange={(v) => setConfirmDialog({ ...confirmDialog, open: v })}
+                title={`Eliminar dominio: ${confirmDialog.domainName}`}
+                description="¿Desea continuar con la eliminación de este dominio? Esta acción es irreversible."
+                confirmLabel="Sí, eliminar"
+                cancelLabel="Cancelar"
+                onConfirm={handleDeleteDomain}
+                type="confirm"
+            />
+
+            <Dialog // Info Dialog
+                open={infoDialog.open}
+                onOpenChange={(v) => setInfoDialog({ ...infoDialog, open: v })}
+                title={infoDialog.title}
+                description={infoDialog.message}
+                type="info"
+            />
         </Layout>
     );
 };
