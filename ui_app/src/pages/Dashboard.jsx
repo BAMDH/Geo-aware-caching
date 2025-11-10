@@ -45,7 +45,6 @@ const Dashboard = () => {
                 domainId: domain.id,
                 domainName: domain.domain,
                 verificationToken: domain.verificationToken,
-                //verificationHost: domain.verificationHost
             }
         });
     };
@@ -143,7 +142,18 @@ const Dashboard = () => {
                                     className="flex-1 bg-[rgb(28,58,141)] text-white rounded-lg py-1 hover:bg-[rgb(25,50,120)] transition flex items-center justify-center gap-1">
                                     Completar verificación
                                 </button>
-                            ) : null}
+                            ) : (
+                                <button
+                                    onClick={() => navigate(`/urlAdd`, {
+                                        state: {
+                                            domainId: domain.id,
+                                            domainName: domain.domain
+                                        }
+                                    })}
+                                    className="flex-1 bg-green-700/80 text-white rounded-lg py-1 hover:bg-green-800/80 transition flex items-center justify-center gap-1">
+                                    Agregar URLs
+                                </button>
+                            )}
                             <button
                                 onClick={() => openDeleteDialog(domain)}
                                 className="flex-1 bg-red-600/80 text-white rounded-lg py-1 hover:bg-red-700/80 transition">

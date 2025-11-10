@@ -5,6 +5,7 @@ import LoginPage from './pages/Login.jsx'
 import RegisterPage from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddDomainPage from './pages/AddDomain.jsx'
+import AddURLPage from './pages/AddURL.jsx'
 import './index.css'
 
 const router = createBrowserRouter([
@@ -12,6 +13,7 @@ const router = createBrowserRouter([
   { path: "/register", element: <RegisterPage/> },
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/domainAdd", element: <AddDomainPage /> },
+  { path: "/urlAdd", element: <AddURLPage /> },
 ]);
 
 createRoot(document.getElementById('root')).render(

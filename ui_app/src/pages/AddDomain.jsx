@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import CustomForm from "../components/Form";
 import Dialog from "../components/Dialog";
-import { LuArrowLeft, LuCircleCheck, LuCopy } from "react-icons/lu";
+import { LuArrowLeft, LuCircleCheck, LuCopy, LuChevronRight } from "react-icons/lu";
 import Layout from "../components/Layout";
 import { API_BASE_URL } from "../constants/api";
 
@@ -37,6 +37,7 @@ const AddDomainPage = () => {
         { name: "subdomains", label: "Subdominios (separados por comas)", type: "text", placeholder: "ejemplo: www, api, cdn", required: false },
     ];
 
+    // Crear dominio
     const handleSubmit = async (data) => {
         setIsLoading(true);
         setInfoDialog({ open: false });
@@ -105,7 +106,6 @@ const AddDomainPage = () => {
     // Función auxiliar para copiar al portapapeles
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
-        //alert("Copiado al portapapeles: " + text);
     };
 
     // Renderizado de Vistas (Paso 1 y 2)
@@ -159,7 +159,8 @@ const AddDomainPage = () => {
             <div className="mb-6 inline-flex items-center gap-4" >
                 <LuArrowLeft className="w-7 h-7 cursor-pointer" onClick={() => navigate("/dashboard")} />
                 <span className="text-xl font-semibold">
-                    {step === 1 ? "Agregar Dominio" : `Verificar ${formData.domainName || 'Dominio'}`}
+                    {step === 1 ? "Agregar Dominio" :
+                    `Verificar ${formData.domainName || 'dominio'}`}
                 </span>
             </div>
 
