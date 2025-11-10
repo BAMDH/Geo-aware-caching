@@ -4,13 +4,10 @@ import dns from "dns";
 import { promisify } from "util"
 
 const domainsRef = db.collection("domains");
+const apiKeysRef = db.collection("api_keys");
 const resolveTxtPromise = promisify(dns.resolveTxt); // Para usar async/await con DNS
 
-// Generar el token TXT
-function generateVerificationToken() {
-    return crypto.randomBytes(16).toString('hex');
-}
-
+// *********************************** DOMINIOS *********************************** //
 // Agregar dominio //
 // 1. Genera el token y guarda el dominio en la db
 export async function addDomain(req, res) {
@@ -25,16 +22,15 @@ export async function addDomain(req, res) {
         const existing = await domainsRef.where("domain", "==", domain).get();
         if (!existing.empty) return res.status(400).json({ error: "Dominio ya registrado o en proceso de registro" });
 
-        //const verificationToken = generateVerificationToken();
-
         const newDomain = {
             domain: domain.toLowerCase(),
+            createdAt: new Date(),
+            userId: req.user.id,
             verificationToken: txt,
+            isVerified: false,
             cache_size: cache_size || -1,
             subdomains: subdomains || [],
-            userId: req.user.id,
-            createdAt: new Date(),
-            isVerified: false,
+            urls: [],
         };
 
         const docRef = await domainsRef.add(newDomain);
@@ -124,11 +120,12 @@ export async function deleteDomain(req, res) {
     }
 }
 
+// *********************************** URLS *********************************** //
 // Agregar URL a dominio
 export async function addUrl(req, res) {
     try {
         const { domainId } = req.params;
-        const { url, ttl, file_types, cache_policy } = req.body;
+        const { url, cache_size, file_types, ttl, replacement_policy, type_auth } = req.body;
 
         const domainDoc = await domainsRef.doc(domainId).get();
         if (!domainDoc.exists) return res.status(404).json({ error: "Dominio no encontrado" });
@@ -138,8 +135,30 @@ export async function addUrl(req, res) {
             return res.status(403).json({ error: "Dominio no verificado. Complete la validación TXT antes de agregar URLs." });
         }
 
+        // Se valida que no se este excediendo el tamanno de caché del dominio
+        const domainCacheLimit = domainData.cache_size || -1;
+        const urlCacheSize = parseInt(cache_size, 10);
+        if (urlCacheSize <= 0) {
+            return res.status(400).json({ error: "El tamaño de caché de la URL debe ser un número positivo." });
+        }
+
+        const urlsSnap = await domainsRef.doc(domainId).collection("urls").get();
+
+        // Calcular la suma total de caché ya asignada
+        let assignedCacheTotal = 0;
+        urlsSnap.docs.forEach(doc => {
+            const size = doc.data().cache_size;
+            assignedCacheTotal += parseInt(size, 10) || 0;
+        });
+        const newCacheTotal = assignedCacheTotal + urlCacheSize;
+        if (domainCacheLimit !== -1 && newCacheTotal > domainCacheLimit) {
+            return res.status(400).json({
+                error: `La caché total asignada (${newCacheTotal} MB) excede el límite del dominio (${domainCacheLimit} MB). Espacio disponible: ${domainCacheLimit - assignedCacheTotal} MB.`
+            });
+        }
+
         const urlsRef = domainsRef.doc(domainId).collection("urls");
-        await urlsRef.add({ url, ttl, file_types, cache_policy });
+        await urlsRef.add({ url, cache_size, file_types, ttl, replacement_policy, type_auth  });
         res.status(201).json({ message: "URL agregada correctamente" });
     } catch (error) {
         console.error("Error al agregar URL:", error);
@@ -167,78 +186,244 @@ export async function getUrls(req, res) {
     }
 }
 
-// TODO: delete url
-
-// TODO: ver si es mejor usar apikey
-// Crear session_id para un dominio
-export async function createSession(req, res) {
+// Actualizar URL
+export async function updateUrl(req, res) {
     try {
-        const { domainId } = req.params;
-        const { user } = req.body;
+        const { domainId, urlId } = req.params;
+        const { url, cache_size, file_types, ttl, replacement_policy, type_auth } = req.body;
 
         const domainDoc = await domainsRef.doc(domainId).get();
-        if (!domainDoc.exists)
-            return res.status(404).json({ error: "Dominio no encontrado" });
-
-        const domainData = domainDoc.data();
-
-        if (!domainData.isVerified) {
-            return res.status(403).json({ error: "Dominio no verificado. Complete la validación TXT para crear sesiones." });
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(404).json({ error: "Dominio no encontrado o acceso denegado." });
         }
 
-        if (domainData.type_auth !== "session_id")
-            return res.status(400).json({ error: "Este dominio no usa session_id" });
+        const urlsRef = domainsRef.doc(domainId).collection("urls");
+        const urlDocRef = urlsRef.doc(urlId);
+        const currentUrlDoc = await urlDocRef.get();
 
-        const session_id = crypto.randomBytes(24).toString("hex");
-        const newSession = {
-            session_id,
-            user,
+        if (!currentUrlDoc.exists) {
+            return res.status(404).json({ error: "Configuración de URL no encontrada." });
+        }
+
+        const domainCacheLimit = domainDoc.data().cache_size || -1;
+        const currentUrlData = currentUrlDoc.data();
+
+        const updateData = {};
+
+        // Se valida que no se este excediendo el tamanno de caché del dominio
+        let newUrlCacheSize = currentUrlData.cache_size;
+
+        if (cache_size !== undefined && cache_size !== currentUrlData.cache_size) {
+            newUrlCacheSize = parseInt(cache_size, 10);
+
+            if (newUrlCacheSize <= 0) {
+                return res.status(400).json({ error: "El tamaño de caché de la URL debe ser un número positivo." });
+            }
+
+            const urlsSnap = await urlsRef.get();
+            let assignedCacheTotal = 0;
+            urlsSnap.docs.forEach(doc => {
+                if (doc.id !== urlId) {
+                    const size = doc.data().cache_size;
+                    assignedCacheTotal += parseInt(size, 10) || 0;
+                }
+            });
+            const newCacheTotal = assignedCacheTotal + newUrlCacheSize;
+
+            if (domainCacheLimit !== -1 && newCacheTotal > domainCacheLimit) {
+                return res.status(400).json({
+                    error: `La nueva caché total asignada (${newCacheTotal} MB) excede el límite del dominio (${domainCacheLimit} MB).`
+                });
+            }
+
+            updateData.cache_size = newUrlCacheSize;
+        }
+
+        if (url !== undefined) updateData.url = url;
+        if (file_types !== undefined) updateData.file_types = file_types;
+        if (ttl !== undefined) updateData.ttl = ttl;
+        if (replacement_policy !== undefined) updateData.replacement_policy = replacement_policy;
+        if (type_auth !== undefined) updateData.type_auth = type_auth;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(200).json({ message: "No se proporcionaron datos para actualizar." });
+        }
+
+        await urlDocRef.update(updateData);
+
+        res.status(200).json({ message: "Configuración åde URL actualizada correctamente." });
+
+    } catch (error) {
+        console.error("Error al actualizar URL:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// Eliminar URL de un dominio
+export async function deleteUrl(req, res) {
+    try {
+        const { domainId, urlId } = req.params;
+
+        // Verificar si el dominio existe
+        const domainDoc = await domainsRef.doc(domainId).get();
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(404).json({ error: "Dominio no encontrado o acceso denegado." });
+        }
+
+        // Verificar que la URL existe
+        const urlDocRef = domainsRef.doc(domainId).collection("urls").doc(urlId);
+        const urlDoc = await urlDocRef.get();
+        if (!urlDoc.exists) {
+            return res.status(404).json({ error: "URL no encontrada en este dominio." });
+        }
+
+        // Eliminar api keys asociadas a esta URL
+        const associatedKeysSnap = await apiKeysRef
+            .where("domainId", "==", domainId)
+            .where("urlId", "==", urlId)
+            .get();
+
+        const batch = db.batch();
+        associatedKeysSnap.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        console.log(`[Limpieza] Eliminadas ${associatedKeysSnap.size} API Keys asociadas a urlId: ${urlId}`);
+
+        await urlDocRef.delete();
+        res.json({ message: "Configuración de URL y sus API Keys asociadas eliminadas correctamente." });
+
+    } catch (error) {
+        console.error("Error al eliminar URL:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+
+// *********************************** API KEYS *********************************** //
+// Generar un token único y seguro para la API Key
+function generateApiKeyString() {
+    return 'sk-' + crypto.randomBytes(24).toString('hex');
+}
+
+// Crear una nueva API Key para una URL específica
+export async function createApiKey(req, res) {
+    try {
+        const { domainId, urlId } = req.body;
+
+        // Verificar permisos del usuario y si la URL existe
+        const urlDoc = await domainsRef.doc(domainId).collection("urls").doc(urlId).get();
+        if (!urlDoc.exists || urlDoc.data().type_auth !== "apikey") {
+            return res.status(400).json({ error: "URL no encontrada o no usa autenticación API Key." });
+        }
+        if (urlDoc.data().userId && urlDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado a este recurso." });
+        }
+
+        const newApiKey = generateApiKeyString();
+
+        const newKeyDoc = {
+            apiKey: newApiKey,
+            userId: req.user.id,
+            domainId: domainId,
+            urlId: urlId,
+            urlPattern: urlDoc.data().url,
             createdAt: new Date(),
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+            isActive: true,
         };
 
-        await domainsRef.doc(domainId).collection("sessions").add(newSession);
+        const docRef = await apiKeysRef.add(newKeyDoc);
 
         res.status(201).json({
-            message: "Sesión creada correctamente",
-            session_id,
-            expiresAt: newSession.expiresAt,
+            id: docRef.id,
+            message: "API Key generada correctamente. **Guárdela ahora, no se volverá a mostrar**.",
+            apiKey: newApiKey
         });
     } catch (error) {
-        console.error("Error al crear sesión:", error);
+        console.error("Error al generar API Key:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
 
-// Obtener sesiones activas de un dominio
-export async function getSessions(req, res) {
+// Obtener las API Keys de un usuario o dominio
+export async function getApiKeys(req, res) {
     try {
         const { domainId } = req.params;
+        // Solo obtener las claves que pertenecen a los recursos de este usuario/dominio
+        const snapshot = await apiKeysRef
+            .where("userId", "==", req.user.id)
+            .where("domainId", "==", domainId)
+            .get();
 
-        const domainDoc = await domainsRef.doc(domainId).get();
-        if (!domainDoc.exists) return res.status(404).json({ error: "Dominio no encontrado" });
+        const keys = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                urlPattern: data.urlPattern,
+                // Muestra solo los últimos 4 caracteres para identificación
+                last4: data.apiKey.slice(-4),
+                isActive: data.isActive
+            };
+        });
 
-        if (!domainDoc.data().isVerified) {
-            return res.status(403).json({ error: "Dominio no verificado. No se pueden ver las sesiones." });
-        }
-
-        const sessionsSnap = await domainsRef.doc(domainId).collection("sessions").get();
-        const sessions = sessionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.json(sessions);
+        res.json(keys);
     } catch (error) {
-        console.error("Error al obtener sesiones:", error);
+        console.error("Error al obtener API Keys:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
 
-// Eliminar una sesión
-export async function deleteSession(req, res) {
+// Eliminar una API key
+export async function deleteApiKey(req, res) {
     try {
-        const { domainId, sessionId } = req.params;
-        await domainsRef.doc(domainId).collection("sessions").doc(sessionId).delete();
-        res.json({ message: "Sesión eliminada correctamente" });
+        const { apiKeyId } = req.params;
+
+        const keyDoc = await apiKeysRef.doc(apiKeyId).get();
+        if (!keyDoc.exists || keyDoc.data().userId !== req.user.id) {
+            return res.status(404).json({ error: "API Key no encontrada o acceso denegado." });
+        }
+
+        await apiKeysRef.doc(apiKeyId).delete();
+        res.json({ message: "API Key eliminada correctamente (revocada)" });
     } catch (error) {
-        console.error("Error al eliminar sesión:", error);
+        console.error("Error al eliminar API Key:", error);
         res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// Verificar una API Key para acceso al Cache Zonal
+export async function verifyAccessApiKey(req, res) {
+    try {
+        const { apiKey } = req.body;
+        if (!apiKey) {
+            return res.status(400).json({ error: "Falta el campo 'apiKey'." });
+        }
+
+        // Buscar la clave en la colección de nivel superior
+        const snapshot = await apiKeysRef
+            .where("apiKey", "==", apiKey)
+            .where("isActive", "==", true)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            // Clave no encontrada o inactiva: acceso denegado
+            return res.status(401).json({ valid: false, message: "API Key inválida o inactiva." });
+        }
+
+        const keyData = snapshot.docs[0].data();
+
+        res.json({
+            valid: true,
+            domainId: keyData.domainId,
+            urlId: keyData.urlId,
+            urlPattern: keyData.urlPattern,
+            message: "API Key válida."
+        });
+
+    } catch (error) {
+        console.error("Error en la verificación de API Key para el Cache Zonal:", error);
+        res.status(500).json({ valid: false, message: "Error interno del servidor durante la verificación." });
     }
 }
