@@ -381,15 +381,20 @@ function generateApiKeyString() {
 // Crear una nueva API Key para una URL específica
 export async function createApiKey(req, res) {
     try {
-        const { domainId, urlId } = req.body;
+        const { domainId, urlPattern } = req.body;
 
-        // Verificar permisos del usuario y si la URL existe
-        const urlDoc = await domainsRef.doc(domainId).collection("urls").doc(urlId).get();
-        if (!urlDoc.exists || urlDoc.data().typeAuth !== "api-key") {
-            return res.status(400).json({ error: "URL no encontrada o no usa autenticación API Key." });
+        const domainDocRef = domainsRef.doc(domainId);
+        const domainDoc = await domainDocRef.get();
+
+        if (!domainDoc.exists) {
+            return res.status(404).json({ error: "Dominio no encontrado." });
         }
-        if (urlDoc.data().userId && urlDoc.data().userId !== req.user.id) {
-            return res.status(403).json({ error: "Acceso denegado a este recurso." });
+
+        const domainData = domainDoc.data();
+        let currentUrls = domainData.urls || [];
+        const urlConfig = currentUrls.find(item => item.url === urlPattern);
+        if (!urlConfig || urlConfig.typeAuth !== "api-key") {
+            return res.status(400).json({ error: "Patrón de URL no encontrado o no usa autenticación API Key." });
         }
 
         const newApiKey = generateApiKeyString();
@@ -409,7 +414,8 @@ export async function createApiKey(req, res) {
         res.status(201).json({
             id: docRef.id,
             message: "API Key generada correctamente. **Guárdela ahora, no se volverá a mostrar**.",
-            apiKey: newApiKey
+            apiKey: newApiKey,
+            urlPattern: urlPattern,
         });
     } catch (error) {
         console.error("Error al generar API Key:", error);
@@ -421,6 +427,10 @@ export async function createApiKey(req, res) {
 export async function getApiKeys(req, res) {
     try {
         const { domainId } = req.params;
+        const domainDoc = await domainsRef.doc(domainId).get();
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado." });
+        }
         // Solo obtener las claves que pertenecen a los recursos de este usuario/dominio
         const snapshot = await apiKeysRef
             .where("userId", "==", req.user.id)
@@ -450,13 +460,15 @@ export async function deleteApiKey(req, res) {
     try {
         const { apiKeyId } = req.params;
 
-        const keyDoc = await apiKeysRef.doc(apiKeyId).get();
+        const keyDocRef = apiKeysRef.doc(apiKeyId);
+        const keyDoc = await keyDocRef.get();
+
         if (!keyDoc.exists || keyDoc.data().userId !== req.user.id) {
             return res.status(404).json({ error: "API Key no encontrada o acceso denegado." });
         }
 
-        await apiKeysRef.doc(apiKeyId).delete();
-        res.json({ message: "API Key eliminada correctamente (revocada)" });
+        await keyDocRef.delete();
+        res.json({ message: "API Key eliminada correctamente" });
     } catch (error) {
         console.error("Error al eliminar API Key:", error);
         res.status(500).json({ error: "Error interno del servidor" });
@@ -466,9 +478,10 @@ export async function deleteApiKey(req, res) {
 // Verificar una API Key para acceso al Cache Zonal
 export async function verifyAccessApiKey(req, res) {
     try {
-        const { apiKey } = req.body;
+        const apiKey = req.body.apiKey || req.query.apiKey || req.headers['client-api-key']; 
+
         if (!apiKey) {
-            return res.status(400).json({ error: "Falta el campo 'apiKey'." });
+            return res.status(400).json({ valid: false, message: "Falta la clave de API." });
         }
 
         // Buscar la clave en la colección de nivel superior
