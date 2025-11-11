@@ -1,7 +1,7 @@
 import express from "express";
 import { requireAuth } from "../middleware/auth.js";
 import {
-    getDomains, addDomain, verifyDomain, deleteDomain,
+    getDomains, getDomainById, addDomain, verifyDomain, updateDomain, deleteDomain,
     addUrl, getUrls, updateUrl, deleteUrl,
     createApiKey, getApiKeys, deleteApiKey, verifyAccessApiKey
 } from "../controllers/domainController.js";
@@ -11,8 +11,10 @@ router.use(requireAuth); // todas requieren autenticación
 
 // Rutas de dominios
 router.get("/", getDomains);
+router.get("/:domainId", getDomainById);
 router.post("/", addDomain);
 router.post("/:domainId/verify", verifyDomain);
+router.put("/:domainId", updateDomain);
 router.delete("/:domainId", deleteDomain);
 
 // Rutas de URLs dentro de un dominio

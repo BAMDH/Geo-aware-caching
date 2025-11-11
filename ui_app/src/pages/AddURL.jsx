@@ -18,17 +18,18 @@ const AddURLPage = () => {
         domainId: initialData.domainId || null,
         domainName: initialData.domainName || '',
     });
+    const [formKey, setFormKey] = useState(0);
 
     const [isLoading, setIsLoading] = useState(false);
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: "", type: "info" });
 
     const urlFields = [
         { name: "url", label: "Patrón de URL (con Wildcard)", type: "text", placeholder: "ejemplo: api.dominio.com/* o /images/*.png", required: true },
-        { name: "cache_size", label: "Tamaño de Caché (MB) para esta URL", type: "number", placeholder: "ejemplo: 50", required: true },
-        { name: "file_types", label: "Tipos de Archivo a Cachear (separados por comas)", type: "text", placeholder: "ejemplo: png, html, js, css", required: true },
+        { name: "cacheSize", label: "Tamaño de Caché (MB) para esta URL", type: "number", placeholder: "ejemplo: 50", required: true },
+        { name: "fileTypes", label: "Tipos de Archivo a Cachear (separados por comas)", type: "text", placeholder: "ejemplo: png, html, js, css", required: true },
         { name: "ttl", label: "TTL (Tiempo de Vida - segundos)", type: "number", placeholder: "ejemplo: 3600 (1 hora)", required: true },
         {
-            name: "replacement_policy", label: "Política de Reemplazo de Caché", type: "select",
+            name: "replacementPolicy", label: "Política de Reemplazo de Caché", type: "select",
             options: [
                 { value: "LRU", label: "LRU (Least Recently Used)" },
                 { value: "LFU", label: "LFU (Least Frequently Used)" },
@@ -49,17 +50,17 @@ const AddURLPage = () => {
         }
 
         try {
-            const fileTypesArray = data.file_types
-                ? data.file_types.split(",").map((s) => s.trim()).filter(Boolean)
+            const fileTypesArray = data.fileTypes
+                ? data.fileTypes.split(",").map((s) => s.trim()).filter(Boolean)
                 : [];
 
             const urlData = {
                 url: data.url,
-                cache_size: Number.parseInt(data.cache_size),
-                file_types: fileTypesArray,
+                cacheSize: Number.parseInt(data.cacheSize),
+                fileTypes: fileTypesArray,
                 ttl: Number.parseInt(data.ttl),
                 replacementPolicy: data.replacementPolicy,
-                type_auth: 'api-key' // Por defecto, se usa autenticación por API Key
+                typeAuth: 'api-key' // Por defecto, se usa autenticación por API Key
             };
 
             const response = await fetch(`${API_BASE_URL}/domains/${formData.domainId}/urls`, {
@@ -72,7 +73,8 @@ const AddURLPage = () => {
             const result = await response.json();
 
             if (response.ok) {
-                setInfoDialog({ open: true, title: "URL Agregada", message: `La URL '${data.url}' se ha configurado correctamente.`, type: "info" });
+                setInfoDialog({ open: true, title: "URL Agregada", message: `La URL '${data.url}' se ha agregado correctamente.`, type: "info" });
+                setFormKey(prevKey => prevKey + 1);
             } else {
                 setInfoDialog({ open: true, title: "Error al configurar URL", message: result.error || "Error desconocido al agregar URL.", type: "error" });
             }
@@ -101,6 +103,7 @@ const AddURLPage = () => {
                 <h2 className="text-xl font-semibold mb-6">Configuración de URLs</h2>
 
                 <CustomForm
+                    key={formKey}
                     theme="light"
                     fields={urlFields}
                     submitLabel="Añadir URL"

@@ -49,6 +49,15 @@ const Dashboard = () => {
         });
     };
 
+    const handleViewDetails = (domain) => {
+        navigate(`/domain`, {
+            state: {
+                domainId: domain.id,
+                domainName: domain.domain
+            }
+        });
+    };
+
     const handleDeleteDomain = async () => {
         const { domainId, domainName } = confirmDialog;
 
@@ -113,6 +122,7 @@ const Dashboard = () => {
                 {domains.map((domain) => (
                     <div
                         key={domain.id}
+                        onDoubleClick={() => handleViewDetails(domain)}
                         // Estilo basado en el estado de verificación
                         className={`rounded-xl p-6 transition-all ${
                             domain.isVerified

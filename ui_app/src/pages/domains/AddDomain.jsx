@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import CustomForm from "../components/Form";
-import Dialog from "../components/Dialog";
-import { LuArrowLeft, LuCircleCheck, LuCopy, LuChevronRight } from "react-icons/lu";
-import Layout from "../components/Layout";
-import { API_BASE_URL } from "../constants/api";
+import CustomForm from "../../components/Form";
+import Dialog from "../../components/Dialog";
+import { LuArrowLeft, LuCircleCheck, LuCopy } from "react-icons/lu";
+import Layout from "../../components/Layout";
+import { API_BASE_URL } from "../../constants/api";
 
 const AddDomainPage = () => {
     const navigate = useNavigate();
@@ -33,7 +33,7 @@ const AddDomainPage = () => {
     const domainFields = [
         { name: "domain", label: "Dominio", type: "text", placeholder: "ejemplo: domain.duckdns.org", required: true },
         { name: "txt", label: "Contenido de record TXT", type: "text", placeholder: "ejemplo: HelloWorld", required: true },
-        { name: "cache_size", label: "Tamaño de caché (MB)", type: "number", placeholder: "ejemplo: 200", required: true },
+        { name: "cacheSize", label: "Tamaño de caché (MB)", type: "number", placeholder: "ejemplo: 200", required: true },
         { name: "subdomains", label: "Subdominios (separados por comas)", type: "text", placeholder: "ejemplo: www, api, cdn", required: false },
     ];
 
@@ -47,7 +47,7 @@ const AddDomainPage = () => {
             const domainData = {
                 domain: data.domain,
                 txt: data.txt,
-                cache_size: Number.parseInt(data.cache_size),
+                cacheSize: Number.parseInt(data.cacheSize),
                 subdomains: subdomainsArray,
             };
 

@@ -62,7 +62,6 @@ const CustomForm = ({
                         name={field.name}
                         placeholder={field.placeholder}
                         required={field.required}
-                        defaultValue={initialData[field.name]}
                         value={formValues[field.name] || ""}
                         onChange={handleFieldChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
@@ -71,13 +70,13 @@ const CustomForm = ({
                             : "bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:ring-white/30"
                         }`}
                         rows={4}
+                        disabled={field.disabled}
                     />
                 ) : field.type === "select" ? (
                     <select
                         id={field.name}
                         name={field.name}
                         required={field.required}
-                        defaultValue={initialData[field.name] || ""}
                         value={formValues[field.name] || ""}
                         onChange={handleFieldChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
@@ -107,9 +106,9 @@ const CustomForm = ({
                             name={field.name}
                             placeholder={field.placeholder}
                             required={field.required}
-                            defaultValue={initialData[field.name]}
                             value={formValues[field.name] || ""}
                             onChange={handleFieldChange}
+                            disabled={field.disabled}
                             className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
                                 isLight
                                 ? "bg-white border-[rgb(28,58,141)]/30 text-[rgb(28,58,141)] placeholder:text-[rgb(28,58,141)]/50 focus:ring-[rgb(28,58,141)]/50"
