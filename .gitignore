@@ -9,3 +9,5 @@ node_modules/
 
 # Archivos de bloqueo
 package-lock.json
+
+firebase_credentials.json

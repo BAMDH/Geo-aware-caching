@@ -14,7 +14,10 @@ const app = express();
 app.use(helmet());
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: [
+            "https://p02uiapp.vercel.app", // tu frontend en producción
+            "http://localhost:5173"        // para desarrollo local    
+        ],
         credentials: true,
     })
 );
