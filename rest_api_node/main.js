@@ -4,9 +4,9 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
 
-import userRoutes from "./routes/userRoutes.js";
-import domainRoutes from "./routes/domainRoutes.js";
-import cacheRoutes from "./routes/cacheRoutes.js";
+import userRoutes from "./api/userRoutes.js";
+import domainRoutes from "./api/domainRoutes.js";
+import cacheRoutes from "./api/cacheRoutes.js";
 
 dotenv.config();
 const app = express();
