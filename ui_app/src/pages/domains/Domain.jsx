@@ -5,6 +5,9 @@ import CustomForm from "../../components/Form";
 import Layout from "../../components/Layout";
 import Dialog from "../../components/Dialog";
 import { API_BASE_URL } from "../../constants/api";
+import UrlList from "../../components/UrlList";
+import ApiKeysContent from "../../components/ApiKeys";
+import { stringifySubdomains } from "../../constants/functions";
 
 const DomainPage = () => {
     const navigate = useNavigate();
@@ -15,9 +18,29 @@ const DomainPage = () => {
 
     const [domainInfo, setDomainInfo] = useState(null);
     const [urls, setUrls] = useState([]);
+    const [apiKeys, setApiKeys] = useState([]);
+    const [activeTab, setActiveTab] = useState('urls');
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: "", type: "info" });
+
+    // Función para obtener las API Keys
+    const fetchApiKeys = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/domains/${domainId}/api-keys`, {
+                method: "GET",
+                credentials: "include",
+            });
+            if (response.ok) {
+                setApiKeys(await response.json());
+            } else {
+                throw new Error("No se pudieron cargar las API Keys.");
+            }
+        } catch (error) {
+            console.error("Error al cargar API Keys:", error);
+            setInfoDialog({ open: true, title: "Error", message: `Error al cargar API Keys: ${error.message}`, type: "error" });
+        }
+    };
 
     // Función para obtener la información general del dominio
     const fetchDomainInfo = async () => {
@@ -46,6 +69,7 @@ const DomainPage = () => {
         try {
             await Promise.all([
                 fetchDomainInfo(),
+                fetchApiKeys(),
                 (async () => {
                     const response = await fetch(`${API_BASE_URL}/domains/${domainId}/urls`, {
                         method: "GET",
@@ -101,7 +125,7 @@ const DomainPage = () => {
 
     // TODO Handler para editar una URL
     const handleEditUrl = (urlObject) => {
-        // NOTA: Asumiendo que tendrás una ruta /urlEdit/:domainId
+        // TODO
         navigate(`/urlEdit/${domainId}`, {
             state: {
                 domainId: domainId,
@@ -179,74 +203,62 @@ const DomainPage = () => {
                                     // Definición de fields con los valores que provienen del estado
                                     { name: "domain", label: "Dominio (No editable)", type: "text", disabled: true, initialValue: domainInfo.domain },
                                     { name: "cacheSize", label: "Límite de caché (MB)", type: "number", required: true, initialValue: domainInfo.cacheSize },
-                                    { name: "subdomains", label: "Subdominios (separados por comas)", type: "text", placeholder: "ej: www, api", required: false, initialValue: domainInfo.subdomains?.join(', ') || '' },
+                                    {
+                                        name: "subdomains",  label: "Subdominios (Formato: [nombre,ip], [nombre,ip])", type: "text",
+                                        placeholder: "ejemplo: [www,192.168.1.10], [api,192.168.1.11]", required: false, initialValue: stringifySubdomains(domainInfo.subdomains)
+                                    },
                                 ]}
                                 submitLabel="Guardar cambios"
                                 onSubmit={handleUpdateDomain}
                                 isLoading={isUpdating}
-                                initialData={domainInfo}
+                                initialData={{
+                                    ...domainInfo,
+                                    subdomains: stringifySubdomains(domainInfo.subdomains),
+                                }}
                                 key={`domain-form-${domainId}`}
                             />
                         )}
                     </div>
 
-                    {/* Panel de URLs */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">URLs ({urls.length})</h2>
+                        {/* Controles de Pestaña */}
+                        <div className="flex border-b border-gray-200 mb-6">
                             <button
-                                onClick={handleNavigateToAddUrl}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1">
-                                <LuPlus className="w-5 h-5" /> Añadir Nueva
+                                onClick={() => setActiveTab('urls')}
+                                className={`py-2 px-4 text-lg font-medium transition-colors ${
+                                    activeTab === 'urls' ? 'border-b-2 border-[rgb(28,58,141)] text-[rgb(28,58,141)]' : 'text-gray-500 hover:text-gray-700'
+                                }`}>
+                                URLs
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('apiKeys')}
+                                className={`py-2 px-4 text-lg font-medium transition-colors ${
+                                    activeTab === 'apiKeys' ? 'border-b-2 border-[rgb(28,58,141)] text-[rgb(28,58,141)]' : 'text-gray-500 hover:text-gray-700'
+                                }`}>
+                                API Keys
                             </button>
                         </div>
 
-                        {urls.length === 0 ? (
-                            <p className="text-gray-500">No hay URLs para este dominio.</p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patrón de URL</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caché (MB)</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File types</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Política</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TTL</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auth</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {urls.map((urlConfig, index) => (
-                                            <tr key={urlConfig.url || index}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 break-all">{urlConfig.url}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.cacheSize}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.fileTypes}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.replacementPolicy}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.ttl}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${urlConfig.typeAuth === 'apikey' ? 'bg-indigo-100 text-indigo-800' : 'bg-green-100 text-green-800'}`}>
-                                                        {urlConfig.typeAuth}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py- whitespace-nowrap text-sm font-medium">
-                                                    <button onClick={() => handleEditUrl(urlConfig)} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                                                        Editar
-                                                    </button>
-                                                    <button onClick={() => handleDeleteUrl(urlConfig.url)} className="text-red-600 hover:text-red-900">
-                                                        Eliminar
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                        {/* Contenido Dinámico de la Pestaña */}
+                        {activeTab === 'urls' && (
+                            <UrlList
+                                urls={urls}
+                                handleNavigateToAddUrl={handleNavigateToAddUrl}
+                                handleEditUrl={handleEditUrl}
+                                handleDeleteUrl={handleDeleteUrl}
+                            />
+                        )}
+
+                        {activeTab === 'apiKeys' && (
+                            <ApiKeysContent
+                                apiKeys={apiKeys}
+                                domainId={domainId}
+                                urls={urls}
+                                fetchApiKeys={fetchApiKeys}
+                                setInfoDialog={setInfoDialog}
+                            />
                         )}
                     </div>
-
-                    {/* TODO: Panel de API Keys */}
                 </div>
             )}
 

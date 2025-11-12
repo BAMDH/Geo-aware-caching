@@ -1,3 +1,10 @@
+// Función auxiliar para copiar al portapapeles
+export const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+};
+
+
+// ******************************* Funciones para parsear y stringify subdominios ******************************** //
 // Función auxiliar para parsear los subdominios usando el formato [nombre,ip], [nombre,ip]
 export const parseSubdomains = (subdomainsString) => {
     if (!subdomainsString) return [];
@@ -21,4 +28,29 @@ export const parseSubdomains = (subdomainsString) => {
         }
     }
     return result;
+};
+
+// Convierte un array de objetos de subdominios [{name: string, ip: string}, ...] en una cadena de texto formateada para el formulario: [nombre,ip], [nombre,ip]
+export const stringifySubdomains = (subdomainsArray) => {
+    // Verificar si el input es válido y es un array.
+    if (!Array.isArray(subdomainsArray) || subdomainsArray.length === 0) {
+        return '';
+    }
+
+    // Mapear cada objeto a su formato de cadena: [nombre,ip]
+    const formattedStrings = subdomainsArray.map(subdomain => {
+        // Usar la destructuración para mayor claridad
+        const { name, ip } = subdomain;
+
+        // Validar que ambos campos existan antes de formatear
+        if (name && ip) {
+            // Generar la cadena en el formato exacto requerido
+            return `[${name.trim()},${ip.trim()}]`;
+        }
+        return ''; // Retornar cadena vacía para subdominios incompletos
+    });
+
+    // 3. Unir todas las cadenas formateadas con ", "
+    // El filter(Boolean) elimina cualquier cadena vacía generada en el paso 2
+    return formattedStrings.filter(Boolean).join(', ');
 };

@@ -5,7 +5,7 @@ import Dialog from "../../components/Dialog";
 import { LuArrowLeft, LuCircleCheck, LuCopy } from "react-icons/lu";
 import Layout from "../../components/Layout";
 import { API_BASE_URL } from "../../constants/api";
-import { parseSubdomains } from "../../constants/functions";
+import { parseSubdomains, copyToClipboard } from "../../constants/functions";
 
 const AddDomainPage = () => {
     const navigate = useNavigate();
@@ -102,11 +102,6 @@ const AddDomainPage = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    // Función auxiliar para copiar al portapapeles
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
     };
 
     // Renderizado de Vistas (Paso 1 y 2)

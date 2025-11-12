@@ -371,7 +371,6 @@ export async function deleteUrl(req, res) {
     }
 }
 
-// TODO: No han sido probadas
 // *********************************** API KEYS *********************************** //
 // Generar un token único y seguro para la API Key
 function generateApiKeyString() {
@@ -403,8 +402,7 @@ export async function createApiKey(req, res) {
             apiKey: newApiKey,
             userId: req.user.id,
             domainId: domainId,
-            urlId: urlId,
-            urlPattern: urlDoc.data().url,
+            urlPattern: urlPattern,
             createdAt: new Date(),
             isActive: true,
         };

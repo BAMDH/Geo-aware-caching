@@ -1,5 +1,6 @@
 import { db } from "../utils/firebase.js";
 
+import { verifyAccessApiKey } from "./domainController.js";
 const domainsRef = db.collection("domains");
 
 // Obtener el tipo de autenticación y subdominio
