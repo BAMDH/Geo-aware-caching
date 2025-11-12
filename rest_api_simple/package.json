@@ -1,0 +1,17 @@
+{
+  "name": "api-simple",
+  "version": "1.0.0",
+  "description": "Una REST API simple en Node.js con CRUD de nombres",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "Kendall Rodríguez",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "firebase-admin": "^13.6.0"
+  }
+}

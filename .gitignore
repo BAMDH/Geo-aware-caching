@@ -1,4 +1,11 @@
-/venv
-rest_api_node/node_modules
-rest_api_node/.env
-ui_app/node_modules
+# Entornos virtuales
+venv/
+
+# Variables de entorno
+.env
+
+# Dependencias de Node.js
+node_modules/
+
+# Archivos de bloqueo
+package-lock.json
