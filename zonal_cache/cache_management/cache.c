@@ -6,6 +6,10 @@
 #include <ctype.h>
 #include <time.h>
 #include "cJSON.h"
+#include <curl/curl.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include "base_64.h" 
 #ifdef _WIN32
 #include <direct.h>  // Windows
 #else
@@ -13,26 +17,12 @@
 #include <sys/types.h>
 #endif
 
-long size(){
-    FILE *fp;
-    long sz;
-
-    // Abre el archivo en modo lectura binaria
-    fp = fopen("Yui.jpg", "rb");  
-    if (fp == NULL) {
-        perror("Error al abrir el archivo");
-        return 1;
-    }
-
-
-    fseek(fp, 0L, SEEK_END);
-    sz = ftell(fp);
-    printf("Tamaño del archivo: %ld bytes\n", sz);
-    rewind(fp);
-    fclose(fp);
-
-    return 0;
-}
+typedef struct {
+    char dominio[256];
+    char filename[256];
+    char *contenido;
+    long size;
+} ArchivoInfo;
 
 //convierte mb y kb a bytes
 long convertir_a_bytes(const char *size) {
@@ -426,30 +416,284 @@ bool add_file(const char *dominio, const char *filename, const char *contenido, 
 
 }
 
+
+
+
+
+// escribe el struct info
+static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t total_size = size * nmemb;
+    ArchivoInfo *info = (ArchivoInfo *)userp;
+
+    char *ptr = realloc(info->contenido, info->size + total_size + 1);
+    if (!ptr) {
+        fprintf(stderr, "Error: sin memoria al descargar.\n");
+        return 0;
+    }
+
+    info->contenido = ptr;
+    memcpy(&(info->contenido[info->size]), contents, total_size);
+    info->size += total_size;
+    info->contenido[info->size] = '\0';
+
+    return total_size;
+}
+
+
+ArchivoInfo *get_file_from_url(const char *dominio, const char *url) {
+    CURL *curl;
+    CURLcode res;
+
+    ArchivoInfo *info = calloc(1, sizeof(ArchivoInfo));
+    if (!info) return NULL;
+
+    strncpy(info->dominio, dominio, sizeof(info->dominio) - 1);
+    const char *filename = strrchr(url, '/');
+    if (filename) filename++;
+    printf("URL: %-30s → filename: %s\n", url, filename);
+    if (strcmp(filename, dominio) == 0)
+        filename = "index.html";
+    printf("URL: %-30s → filename: %s\n", url, filename);
+    strncpy(info->filename, filename, sizeof(info->filename) - 1);
+
+    info->contenido = NULL;
+    info->size = 0;
+
+    curl = curl_easy_init();
+    if (!curl) {
+        fprintf(stderr, "Error inicializando libcurl.\n");
+        free(info);
+        return NULL;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)info);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); 
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "Error al descargar: %s\n", curl_easy_strerror(res));
+        curl_easy_cleanup(curl);
+        free(info->contenido);
+        free(info);
+        return NULL;
+    }
+
+    curl_easy_cleanup(curl);
+    return info;
+}
+
+//obtiene el contenido
+char *get_file_content(const char *dominio, const char *filename) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s", dominio, filename); 
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) {
+        perror("Error al abrir archivo");
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    rewind(fp);
+    char *buffer = malloc(size);
+    if (!buffer) {
+        perror("Error al reservar memoria");
+        fclose(fp);
+        return NULL;
+    }
+
+    size_t leidos = fread(buffer, 1, size, fp);
+    fclose(fp);
+
+    if (leidos != size) {
+        fprintf(stderr, "Advertencia: tamaño leído (%zu) != esperado (%ld)\n", leidos, size);
+    }
+
+    return buffer;
+}
+
+
+//devuelve el archivo pedido
+char *get_file(const char * dominio,const char *url){
+     
+    const char *filename = strrchr(url, '/');
+    if (filename) filename++;
+       printf("URL: %-30s → filename: %s\n", url, filename);
+    if (strcmp(filename, dominio) == 0)
+        filename = "index.html";
+       printf("URL: %-30s → filename: %s\n", url, filename);
+    if (!file_exists(dominio,filename)){
+        ArchivoInfo *info = get_file_from_url(dominio, url);
+        if (!info) {
+            fprintf(stderr, "Error: no se pudo obtener el archivo desde la URL.\n");
+            return NULL;
+        }
+        bool done = add_file(dominio, info->filename, info->contenido, info->size); 
+        if (!done){
+            return NULL;
+        } 
+        free(info->contenido);
+        free(info); 
+    }
+
+    char *content = get_file_content(dominio,filename);
+    conten =base64_encode((const unsigned char *)content, strlen(content))
+    return content;
+}
+/*
+
+
+#define PORT 8080
+#define BUFFER_SIZE 1024
+
+int main() {
+    int sockfd;
+    struct sockaddr_in server_addr, client_addr;
+    char buffer[BUFFER_SIZE];
+    socklen_t addr_len = sizeof(client_addr);
+
+    // Crear socket UDP
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("Error creando socket");
+        exit(EXIT_FAILURE);
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    if (bind(sockfd, (const struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Error en bind");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Servidor UDP escuchando en puerto %d...\n", PORT);
+
+    while (1) {
+        memset(buffer, 0, BUFFER_SIZE);
+        recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
+                 (struct sockaddr *)&client_addr, &addr_len);
+
+        // buffer contiene "dominio url"
+        char dominio[256], url[512];
+        if (sscanf(buffer, "%255s %511s", dominio, url) != 2) {
+            const char *err = "Formato incorrecto. Use: <dominio> <url>";
+            sendto(sockfd, err, strlen(err), 0,
+                   (struct sockaddr *)&client_addr, addr_len);
+            continue;
+        }
+
+        printf("Dominio: %s\n", dominio);
+        printf("URL: %s\n", url);
+
+        // 🔹 Llamar a tu función
+        char *contenido = get_file(dominio, url);
+
+        if (contenido == NULL) {
+            const char *err = "Error: no se pudo obtener el archivo.";
+            sendto(sockfd, err, strlen(err), 0,
+                   (struct sockaddr *)&client_addr, addr_len);
+        } else {
+            // 🔹 Enviar el contenido real
+            sendto(sockfd, contenido, strlen(contenido), 0,
+                   (struct sockaddr *)&client_addr, addr_len);
+            free(contenido); // si get_file malloc() el buffer
+        }
+    }
+
+    close(sockfd);
+    return 0;
+}
+
+
+/*
 int main() {
     srand(time(NULL));
-    char dominio[100] = "www.hola.com";;
+    //char dominio[] = "www.vndb.org";
+    //const char *url2= "https://www.vndb.org"; 
+    // crear config si no existe
+    // set_config(dominio, "120mb", "LRU");
+    int sockfd;
+    struct sockaddr_in server_addr, client_addr;
+    char buffer[1024];
+    socklen_t addr_len = sizeof(client_addr);
 
-    //set_config(dominio,"120mb");
+    // Crear socket UDP
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
+        perror("Error creando socket");
+        exit(EXIT_FAILURE);
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(9090);
+
+    // Enlazar el socket
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Error en bind");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Servidor UDP escuchando en puerto 9090...\n");
+
+    while (1) {
+        ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0,
+                               (struct sockaddr *)&client_addr, &addr_len);
+        if (len < 0) {
+            perror("Error en recvfrom");
+            continue;
+        }
+
+        buffer[len] = '\0';
+        printf("Recibido: %s\n", buffer);
+
+        const char *filename = get_filename_from_url(buffer);
+        printf("→ Filename: %s\n", filename);
+
+        sendto(sockfd, filename, strlen(filename), 0,
+               (struct sockaddr *)&client_addr, addr_len);
+    }
+
+    close(sockfd);
+    return 0;
+   
+    
+    const char *file=get_file(dominio,url2);
+    if (!file) {
+        printf("No se pudo leer el archivo.\n");
+        return 1;
+    }else {
+        printf("Archivo encontrado o descargado.\n");
+    }
+    
+    return 0;
+
+
+    //set_config(dominio,"120mb","LRU");
     //bool valor = is_enough_space(dominio,10);
     //bool valor = file_exists(dominio,"yui3.jpg");
     //bool valor = delete_file(dominio,"yui3.jpg");
-    long tam;
-    char *nombre ="Prueba3.jpg";
-    char *contenido = leerArchivo(nombre, &tam);
+   // long tam;
+   // char *nombre ="Prueba3.jpg";
+   // char *contenido = leerArchivo(nombre, &tam);
    
-    printf("Tamaño del archivo leído: %ld bytes\n", tam);
+    //printf("Tamaño del archivo leído: %ld bytes\n", tam);
     //bool valor = true;
-    bool valor = add_file(dominio,nombre,contenido,tam);
-    if (valor) {
-        printf("si\n");
-    } else{
-        printf("no\n");
-    }
-    free(contenido);
+    //bool valor = add_file(dominio,nombre,contenido,tam);
+    //if (valor) {
+    //    printf("si\n");
+    //} else{
+    //    printf("no\n");
+    //}
+    //free(contenido);
 
  //cJSON_DeleteItemFromArray(files, i);
 //              return true; // encontrado y eliminado
 
-}
-
+}*/
