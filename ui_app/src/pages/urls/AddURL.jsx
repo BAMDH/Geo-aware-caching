@@ -25,6 +25,7 @@ const AddURLPage = () => {
 
     const urlFields = [
         { name: "url", label: "Patrón de URL (con Wildcard)", type: "text", placeholder: "ejemplo: api.dominio.com/* o /images/*.png", required: true },
+        { name: "ip", label: "Dirección IP", type: "text", placeholder: "ejemplo: 192.129.12.21", required: true },
         { name: "cacheSize", label: "Tamaño de Caché (MB) para esta URL", type: "number", placeholder: "ejemplo: 50", required: true },
         { name: "fileTypes", label: "Tipos de Archivo a Cachear (separados por comas)", type: "text", placeholder: "ejemplo: png, html, js, css", required: true },
         { name: "ttl", label: "TTL (Tiempo de Vida - segundos)", type: "number", placeholder: "ejemplo: 3600 (1 hora)", required: true },
@@ -37,6 +38,7 @@ const AddURLPage = () => {
                 { value: "MRU", label: "MRU (Most Recently Used)" },
                 { value: "Random", label: "Random" },
             ], required: true },
+        { name: "typeAuth", label: "Tipo de autenticación", type: "select", options: [{ value: "api-key", label: "API key" },{ value: "userpass", label: "Usuario y contraseña" },], required: true },
     ];
 
     // Agregar URL
@@ -56,11 +58,12 @@ const AddURLPage = () => {
 
             const urlData = {
                 url: data.url,
+                ip: data.ip,
                 cacheSize: Number.parseInt(data.cacheSize),
                 fileTypes: fileTypesArray,
                 ttl: Number.parseInt(data.ttl),
                 replacementPolicy: data.replacementPolicy,
-                typeAuth: 'api-key' // Por defecto, se usa autenticación por API Key
+                typeAuth: data.typeAuth,
             };
 
             const response = await fetch(`${API_BASE_URL}/domains/${formData.domainId}/urls`, {

@@ -7,7 +7,6 @@ import Dialog from "../../components/Dialog";
 import { API_BASE_URL } from "../../constants/api";
 import UrlList from "../../components/UrlList";
 import ApiKeysContent from "../../components/ApiKeys";
-import { stringifySubdomains } from "../../constants/functions";
 
 const DomainPage = () => {
     const navigate = useNavigate();
@@ -31,8 +30,10 @@ const DomainPage = () => {
                 method: "GET",
                 credentials: "include",
             });
+            const data = await response.json();
             if (response.ok) {
-                setApiKeys(await response.json());
+                console.log("API Keys cargadas:", data);
+                setApiKeys(data);
             } else {
                 throw new Error("No se pudieron cargar las API Keys.");
             }
@@ -94,11 +95,8 @@ const DomainPage = () => {
         setIsUpdating(true);
         setInfoDialog({ open: false });
         try {
-            const subdomainsArray = data.subdomains ? data.subdomains.split(",").map((s) => s.trim()).filter(Boolean) : domainInfo.subdomains;
-
             const updatePayload = {
                 cacheSize: Number.parseInt(data.cacheSize),
-                subdomains: subdomainsArray,
             };
 
             const response = await fetch(`${API_BASE_URL}/domains/${domainId}`, {
@@ -203,18 +201,11 @@ const DomainPage = () => {
                                     // Definición de fields con los valores que provienen del estado
                                     { name: "domain", label: "Dominio (No editable)", type: "text", disabled: true, initialValue: domainInfo.domain },
                                     { name: "cacheSize", label: "Límite de caché (MB)", type: "number", required: true, initialValue: domainInfo.cacheSize },
-                                    {
-                                        name: "subdomains",  label: "Subdominios (Formato: [nombre,ip], [nombre,ip])", type: "text",
-                                        placeholder: "ejemplo: [www,192.168.1.10], [api,192.168.1.11]", required: false, initialValue: stringifySubdomains(domainInfo.subdomains)
-                                    },
                                 ]}
                                 submitLabel="Guardar cambios"
                                 onSubmit={handleUpdateDomain}
                                 isLoading={isUpdating}
-                                initialData={{
-                                    ...domainInfo,
-                                    subdomains: stringifySubdomains(domainInfo.subdomains),
-                                }}
+                                initialData={domainInfo}
                                 key={`domain-form-${domainId}`}
                             />
                         )}

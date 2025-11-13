@@ -5,7 +5,7 @@ import Dialog from "../../components/Dialog";
 import { LuArrowLeft, LuCircleCheck, LuCopy } from "react-icons/lu";
 import Layout from "../../components/Layout";
 import { API_BASE_URL } from "../../constants/api";
-import { parseSubdomains, copyToClipboard } from "../../constants/functions";
+import { copyToClipboard } from "../../constants/functions";
 
 const AddDomainPage = () => {
     const navigate = useNavigate();
@@ -35,7 +35,6 @@ const AddDomainPage = () => {
         { name: "domain", label: "Dominio", type: "text", placeholder: "ejemplo: domain.duckdns.org", required: true },
         { name: "txt", label: "Contenido de record TXT", type: "text", placeholder: "ejemplo: HelloWorld", required: true },
         { name: "cacheSize", label: "Tamaño de caché (MB)", type: "number", placeholder: "ejemplo: 200", required: true },
-        { name: "subdomains", label: "Subdominios (Formato: [nombre,ip], [nombre,ip])", type: "text", placeholder: "ejemplo: [www,192.168.1.10], [api,192.168.1.11]", required: false },
     ];
 
     // Crear dominio
@@ -44,12 +43,10 @@ const AddDomainPage = () => {
         setInfoDialog({ open: false });
         setFormData((prev) => ({ ...prev, ...data }));
         try {
-            const subdomainsArray = parseSubdomains(data.subdomains);
             const domainData = {
                 domain: data.domain,
                 txt: data.txt,
                 cacheSize: Number.parseInt(data.cacheSize),
-                subdomains: subdomainsArray,
             };
 
             const response = await fetch(`${API_BASE_URL}/domains`, {
