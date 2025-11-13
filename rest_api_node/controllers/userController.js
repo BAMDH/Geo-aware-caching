@@ -56,11 +56,12 @@ export async function login(req, res) {
         user: userData.user,
         });
 
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
         // Envia el token como HTTP-Only Cookie
         res.cookie('auth_token', token, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'None',
+            secure: isProduction,
+            sameSite: isProduction ? 'None' : 'Lax',
             maxAge: 3600000 // 1 hora
         });
 
