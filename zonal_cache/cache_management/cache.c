@@ -50,7 +50,7 @@ long convertir_a_bytes(const char *size) {
 }
 
 // Crea la configuracion inicial del dominio
-bool set_config(const char *dominio, const char *size,  const char *type) {
+bool set_config(const char *dominio, const char *size,  const char *type, const char *file_type) {
     char path[512];
 
     // Crear ruta de carpeta igual al dominio

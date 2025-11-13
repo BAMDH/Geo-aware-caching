@@ -45,6 +45,13 @@ int main() {
     printf("LA API KEY OBTENIDA DESDE MAIN ES DE %s", cache_api_key);
     fflush(stdout);
 
+    // Obtener todos los domains
+
+    // recorrer cada domain 
+
+    // funcion de brandon, enviar domain, tamaño, tipo politica de reemplazo, tipo de archivo
+    set_config("domain", "size", "politica_reemplazo", "tipo_archivo");
+
     while (1) {
         int client_fd = accept(sockfd, (struct sockaddr*)&client_addr, &client_len);
         if (client_fd < 0) {

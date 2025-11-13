@@ -16,7 +16,6 @@ spec:
         options:
           - name: ndots
             value: "1"
-      hostNetwork: true 
       containers:
         - name: {{ .Values.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

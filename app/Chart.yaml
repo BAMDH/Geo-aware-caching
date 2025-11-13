@@ -9,7 +9,15 @@ appVersion: "1.16.0"
 
 dependencies:
 
-- name: dns-interceptor
+- name: dns_interceptor
   version: 1.0.0
-  repository: "file://charts/dns-interceptor"
+  repository: "file://charts/dns_interceptor"
   condition: dns_interceptor.enabled
+- name: apache_server
+  version: 1.0.0
+  repository: "file://charts/apache_server"
+  condition: apache_server.enabled
+- name: rest_api_simple
+  version: 1.0.0
+  repository: "file://charts/rest_api_simple"
+  condition: rest_api_simple.enabled

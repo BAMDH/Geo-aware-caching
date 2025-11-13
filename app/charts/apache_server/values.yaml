@@ -1,0 +1,8 @@
+name: apache-server
+replicas: 1
+image: httpd:latest
+
+service:
+  protocol: TCP
+  type: NodePort
+  port: 80

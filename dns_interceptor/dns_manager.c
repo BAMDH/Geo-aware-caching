@@ -108,7 +108,7 @@ dns_response_t handle_dns(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns
     params_t params;
     params.ip_source = strdup(ip_source); // copia segura si es necesario
 
-    char endpoint[] = "interceptor/zonal_cache"; // Endpoint a consultar
+    char endpoint[] = "ip_cache"; // Endpoint a consultar
 
     //char* response_api = call_api(&params, endpoint, "GET");
 

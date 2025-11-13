@@ -1,2 +1,6 @@
 dns_interceptor:
   enabled: true
+apache_server:
+  enabled: true
+rest_api_simple:
+  enabled: true

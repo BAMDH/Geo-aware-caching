@@ -2,6 +2,7 @@
 #include "api.h"
 #include "auth.h"
 #include "json.h"
+#include "cache_management/cache.h"
 
 //////////////////////////// Comunicarse con el cliente /////////////////////////////////
 
@@ -46,12 +47,6 @@ void* handle_client(void* arg) {
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &targ->client_addr.sin_addr, client_ip, sizeof(client_ip));
 
-    printf("Cliente conectado: %s:%d\n", client_ip, ntohs(targ->client_addr.sin_port));
-    fflush(stdout);
-
-    printf("LA API KEY OBTENIDA DESDE MAIN ES DE %s", cache_api_key);
-    fflush(stdout);
-
     int key_session = 0;
 
     char* response_api = NULL;
@@ -78,6 +73,9 @@ void* handle_client(void* arg) {
     parse_host_json(response_api, &params);
 
     strcpy(params.type_auth,"x-api-key");
+
+    // endpoint recibe domain
+    response_api = call_api(params, "domain/config");
 
     if(params.type_auth[0] == '\0'){
 
@@ -124,7 +122,10 @@ void* handle_client(void* arg) {
         if(response_api != NULL){
 
             ip_service = call_api(&params, "domain/ip");
+            
             // Realizar solicitud al servicio requerido
+   
+
         }
 
         else{
