@@ -32,7 +32,7 @@ app.get("/", (req, res) => {
     res.json({ message: "API Node.js funcionando correctamente" });
 });
 
-//const PORT = process.env.PORT;
-//app.listen(PORT, () => console.log(`API segura corriendo en puerto ${PORT}`));
+const PORT = process.env.PORT;
+app.listen(PORT, () => console.log(`API segura corriendo en puerto ${PORT}`));
 
 export default app;

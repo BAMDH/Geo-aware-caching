@@ -1,6 +1,8 @@
 const express = require('express');
 const app = express();
-const port = 3050;
+
+// Tomar el puerto desde la variable de entorno PORT, o usar 3050 por defecto
+const port = process.env.PORT || 3050;
 
 // Middleware para leer JSON
 app.use(express.json());
@@ -12,12 +14,12 @@ let nombres = [
 ];
 
 // GET - Obtener todos los nombres
-app.get('/elementos', (req, res) => {
+app.get('/get_all', (req, res) => {
   res.json(nombres);
 });
 
 // POST - Agregar un nuevo nombre
-app.post('/elementos', (req, res) => {
+app.post('/add_element', (req, res) => {
   const nuevo = {
     id: nombres.length ? nombres[nombres.length - 1].id + 1 : 1,
     nombre: req.body.nombre,
@@ -27,7 +29,7 @@ app.post('/elementos', (req, res) => {
 });
 
 // PUT - Actualizar un nombre existente
-app.put('/elementos/:id', (req, res) => {
+app.put('/update_element/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const index = nombres.findIndex(n => n.id === id);
   if (index === -1) {
@@ -38,7 +40,7 @@ app.put('/elementos/:id', (req, res) => {
 });
 
 // DELETE - Eliminar un nombre
-app.delete('/elementos/:id', (req, res) => {
+app.delete('/delete_element/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const index = nombres.findIndex(n => n.id === id);
   if (index === -1) {

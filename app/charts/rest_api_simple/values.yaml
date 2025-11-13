@@ -1,4 +1,4 @@
-name: apache-server
+name: rest-api-simple
 replicas: 1
 image:
   repository: kendallrc/rest-api-simple
