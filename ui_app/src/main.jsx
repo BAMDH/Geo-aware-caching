@@ -5,7 +5,7 @@ import LoginPage from './pages/Login.jsx'
 import RegisterPage from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddDomainPage from './pages/domains/AddDomain.jsx'
-import AddURLPage from './pages/AddURL.jsx'
+import AddURLPage from './pages/urls/AddURL.jsx'
 import DomainPage from './pages/domains/Domain.jsx'
 import './index.css'
 

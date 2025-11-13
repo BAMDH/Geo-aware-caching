@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import CustomForm from "../components/Form";
-import Dialog from "../components/Dialog";
+import CustomForm from "../../components/Form";
+import Dialog from "../../components/Dialog";
 import { LuArrowLeft, LuChevronRight } from "react-icons/lu";
-import Layout from "../components/Layout";
-import { API_BASE_URL } from "../constants/api";
+import Layout from "../../components/Layout";
+import { API_BASE_URL } from "../../constants/api";
 
 const AddURLPage = () => {
     const navigate = useNavigate();
@@ -93,9 +93,9 @@ const AddURLPage = () => {
     return (
         <Layout>
             <div className="mb-6 inline-flex items-center gap-4" >
-                <LuArrowLeft className="w-7 h-7 cursor-pointer" onClick={() => navigate("/dashboard")} />
+                <LuArrowLeft className="w-7 h-7 cursor-pointer" onClick={() => navigate(-1)} />
                 <span className="text-xl font-semibold">
-                    Administrar URLs de {formData.domainName || 'dominio'}
+                    Administración URLs: {formData.domainName || 'dominio'}
                 </span>
             </div>
 

@@ -172,7 +172,7 @@ const DomainPage = () => {
         fetchDomainData();
     }, [domainId]);
 
-    // Handler para navegar a la página de Añadir URL (usando el componente AddURLPage)
+    // Handler para navegar a la página de Añadir URL
     const handleNavigateToAddUrl = () => {
         navigate(`/urlAdd`, {
             state: {
@@ -186,15 +186,15 @@ const DomainPage = () => {
         <Layout>
             <div className="mb-6 inline-flex items-center gap-4">
                 <LuArrowLeft className="w-7 h-7 cursor-pointer" onClick={() => navigate("/dashboard")} />
-                <h1 className="text-2xl font-semibold">Administración: {domainName || 'Cargando...'}</h1>
+                <h1 className="text-xl font-semibold">Administración: {domainName || 'Cargando...'}</h1>
             </div>
 
             {isLoading ? (
                 <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[rgb(28,58,141)] border-t-transparent rounded-full animate-spin"></div></div>
             ) : (
-                <div className="space-y-8">
+                <div className="space-y-5">
                     {/* Panel de Edición de Dominio */}
-                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                    <div className="bg-[rgb(28,58,141)]/5 p-8 rounded-xl border border-[rgb(28,58,141)]/20">
                         <h2 className="text-xl font-semibold mb-4">Información general</h2>
                         {domainInfo && (
                             <CustomForm
@@ -220,7 +220,7 @@ const DomainPage = () => {
                         )}
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                    <div className="bg-[rgb(28,58,141)]/5 p-8 rounded-xl border border-[rgb(28,58,141)]/20">
                         {/* Controles de Pestaña */}
                         <div className="flex border-b border-gray-200 mb-6">
                             <button

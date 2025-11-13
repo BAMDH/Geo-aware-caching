@@ -20,14 +20,25 @@ const Dashboard = () => {
                 method: "GET",
                 credentials: "include",
             });
-            if (response.status === 401) {
-                navigate("/"); // Si no está autenticado, redirige al login
-                return;
+            if (response.status === 401 || response.status === 403) {
+                setInfoDialog({
+                    open: true,
+                    title: "Sesión Expirada",
+                    message: "Su sesión ha expirado o no está autenticado. Redirigiendo al login...",
+                });
+
+                setTimeout(() => {
+                    setInfoDialog(prev => ({ ...prev, open: false }));
+                    navigate("/");
+                }, 2500);
             }
+            console.log("Respuesta de dominios:", response);
             const data = await response.json();
+            console.log("Dominios obtenidos:", data);
             setDomains(data);
         } catch (error) {
             console.error("Error al cargar dominios:", error);
+            setDomains([]);
         } finally {
             setIsLoading(false);
         }

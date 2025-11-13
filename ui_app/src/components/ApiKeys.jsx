@@ -78,7 +78,7 @@ const ApiKeysContent = ({ apiKeys, domainId, urls, fetchApiKeys, setInfoDialog }
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-700">Claves de Acceso ({apiKeys.length})</h3>
+                <h3 className="text-xl font-semibold">Claves de Acceso ({apiKeys.length})</h3>
                 <div className="flex items-center gap-3">
                     <select
                         value={selectedUrlPattern}

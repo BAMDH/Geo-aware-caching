@@ -59,8 +59,8 @@ export async function login(req, res) {
         // Envia el token como HTTP-Only Cookie
         res.cookie('auth_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Solo se envía sobre HTTPS (obligatorio en Vercel)
-            sameSite: 'Lax', // Protección contra CSRF (Cross-Site Request Forgery)
+            secure: true,
+            sameSite: 'None',
             maxAge: 3600000 // 1 hora
         });
 
