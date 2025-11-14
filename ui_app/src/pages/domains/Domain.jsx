@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { LuArrowLeft, LuPlus } from "react-icons/lu";
+import { LuArrowLeft } from "react-icons/lu";
 import CustomForm from "../../components/Form";
 import Layout from "../../components/Layout";
 import Dialog from "../../components/Dialog";
 import { API_BASE_URL } from "../../constants/api";
 import UrlList from "../../components/UrlList";
 import ApiKeysContent from "../../components/ApiKeys";
+import UserPassContent from "../../components/UserPass";
 
 const DomainPage = () => {
     const navigate = useNavigate();
@@ -18,10 +19,30 @@ const DomainPage = () => {
     const [domainInfo, setDomainInfo] = useState(null);
     const [urls, setUrls] = useState([]);
     const [apiKeys, setApiKeys] = useState([]);
+    const [users, setUsers] = useState([]);
     const [activeTab, setActiveTab] = useState('urls');
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: "", type: "info" });
+
+    // Función para obtener los usuarios
+    const fetchUsers = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/domains/${domainId}/userpass`, {
+                method: "GET",
+                credentials: "include",
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setUsers(data);
+            } else {
+                throw new Error("No se pudieron cargar los Usuarios/Contraseñas.");
+            }
+        } catch (error) {
+            console.error("Error al cargar Usuarios:", error);
+            setInfoDialog({ open: true, title: "Error", message: `Error al cargar User Pass: ${error.message}`, type: "error" });
+        }
+    };
 
     // Función para obtener las API Keys
     const fetchApiKeys = async () => {
@@ -32,7 +53,6 @@ const DomainPage = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                console.log("API Keys cargadas:", data);
                 setApiKeys(data);
             } else {
                 throw new Error("No se pudieron cargar las API Keys.");
@@ -71,6 +91,7 @@ const DomainPage = () => {
             await Promise.all([
                 fetchDomainInfo(),
                 fetchApiKeys(),
+                fetchUsers(),
                 (async () => {
                     const response = await fetch(`${API_BASE_URL}/domains/${domainId}/urls`, {
                         method: "GET",
@@ -228,6 +249,13 @@ const DomainPage = () => {
                                 }`}>
                                 API Keys
                             </button>
+                            <button
+                                onClick={() => setActiveTab('userpass')}
+                                className={`py-2 px-4 text-lg font-medium transition-colors ${
+                                    activeTab === 'userpass' ? 'border-b-2 border-[rgb(28,58,141)] text-[rgb(28,58,141)]' : 'text-gray-500 hover:text-gray-700'
+                                }`}>
+                                Usuarios/Contraseñas
+                            </button>
                         </div>
 
                         {/* Contenido Dinámico de la Pestaña */}
@@ -246,6 +274,16 @@ const DomainPage = () => {
                                 domainId={domainId}
                                 urls={urls}
                                 fetchApiKeys={fetchApiKeys}
+                                setInfoDialog={setInfoDialog}
+                            />
+                        )}
+
+                        {activeTab === 'userpass' && (
+                            <UserPassContent
+                                users={users}
+                                domainId={domainId}
+                                urls={urls.filter(url => url.typeAuth === 'userpass')}
+                                fetchUsers={fetchUsers}
                                 setInfoDialog={setInfoDialog}
                             />
                         )}

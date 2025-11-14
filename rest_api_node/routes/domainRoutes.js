@@ -3,7 +3,8 @@ import { requireAuth } from "../middleware/auth.js";
 import {
     getDomains, getDomainById, addDomain, verifyDomain, updateDomain, deleteDomain,
     addUrl, getUrls, updateUrl, deleteUrl,
-    createApiKey, getApiKeys, deleteApiKey
+    createApiKey, getApiKeys, deleteApiKey,
+    createUserPass, getUserPass, deleteUserPass
 } from "../controllers/domainController.js";
 const router = express.Router();
 
@@ -27,5 +28,11 @@ router.delete("/:domainId/urls/:urlId", deleteUrl);
 router.post("/:domainId/api-keys", createApiKey);
 router.get('/:domainId/api-keys', getApiKeys);
 router.post("/api-keys/delete", deleteApiKey);
+
+// Rutas de User Pass
+router.post("/:domainId/userpass", createUserPass);
+router.get('/:domainId/userpass', getUserPass);
+router.delete("/:domainId/userpass", deleteUserPass);
+
 
 export default router;
