@@ -51,7 +51,11 @@ export async function getTypeAuth(req, res) {
             return res.json({message: `No se encontró configuración específica para el patrón: ${urlPattern}.`});
         }
 
-        res.json(matchingUrlConfig.typeAuth);
+        res.json({
+            domain: domainData.domain,
+            subdomain: urlPattern,
+            type_auth: matchingUrlConfig.typeAuth
+        });
 
     } catch (error) {
         console.error("Error en getTypeAuthLegacy:", error);
@@ -119,10 +123,7 @@ export async function getDomainIP(req, res) {
         }
 
         const fullDomain = `${subdomain}.${domain}`;
-        res.json({
-            domain: fullDomain,
-            ip: subDomainEntry.ip
-        });
+        res.json(subDomainEntry.ip);
 
     } catch (error) {
         console.error("Error al obtener IP:", error);
