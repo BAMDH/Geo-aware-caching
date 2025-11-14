@@ -114,6 +114,12 @@ int main() {
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
 
+    cache_api_key = getenv("SERVICE_API_KEY");
+    url_login_vercel = getenv("URL_LOGIN_VERCEL");
+    PORT = getenv("PORT");
+    HOST_API = getenv("HOST_API");
+    PORT_API = getenv("PORT_API");
+
     // Crear socket TCP
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Error al crear socket");
@@ -138,42 +144,29 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    cache_api_key = getenv("SERVICE_API_KEY");
-    url_login_vercel = getenv("URL_LOGIN_VERCEL");
-    PORT = getenv("PORT");
-    HOST_API = getenv("HOST_API");
-    PORT_API = getenv("PORT_API");
+    
+    //register_cache();
 
-    register_cache();
-
-    printf("Servidor TCP escuchando en el puerto %d...\n", PORT);
+    printf("Servidor TCP escuchando en el puerto %d...\n", atoi(PORT));
     fflush(stdout);
 
     while (1) {
         int client_fd = accept(sockfd, (struct sockaddr*)&client_addr, &client_len);
         if (client_fd < 0) {
             perror("Error accept");
-            fflush(stdout);
             continue;
         }
 
-        char buffer[BUFFER_SIZE];
-        ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
-        if (bytes_read <= 0) {
-            close(client_fd);
-            continue;
-        }
-
+        // Crear estructura por conexión
         thread_arg_t *targ = malloc(sizeof(thread_arg_t));
         targ->client_fd = client_fd;
         targ->client_addr = client_addr;
-        targ->len = bytes_read;
-        memcpy(targ->buffer, buffer, bytes_read);
-        
+
         pthread_t tid;
         pthread_create(&tid, NULL, handle_client, targ);
         pthread_detach(tid);
     }
+
 
     close(sockfd);
     return 0;

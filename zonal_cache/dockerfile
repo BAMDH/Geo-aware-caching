@@ -16,9 +16,9 @@ WORKDIR /app
 COPY . /app
 
 # Compilar el programa
-RUN gcc -o zonal_cache main.c server.c auth.c api.c json.c cache_management/cache.c cache_management/cJSON.c cache_management/base_64.c -lcurl -lssl -lcrypto -lpthread -ljson-c
+RUN gcc -g -Wall -o zonal_cache main.c server.c auth.c api.c json.c cache_management/cache.c cache_management/cJSON.c cache_management/base_64.c -lcurl -lssl -lcrypto -lpthread -ljson-c
 
-# Exponemos el puerto del interceptor
+# Exponemos el puerto
 EXPOSE 8080
 
 # Comando por defecto

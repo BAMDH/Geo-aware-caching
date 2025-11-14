@@ -4,7 +4,9 @@ services:
     container_name: zonal_cache
     ports:
       - "8080:8080"
-    restart: unless-stopped
     environment:
-      - SERVICE_API_KEY=prueba
-   
+      SERVICE_API_KEY: "prueba"
+      URL_LOGIN_VERCEL: "http://api.prueba.com:32339/"
+      PORT: "8080"        
+      HOST_API: "127.0.0.1"
+      PORT_API: "3000"

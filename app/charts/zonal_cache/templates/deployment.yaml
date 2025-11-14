@@ -28,7 +28,7 @@ spec:
             - name: URL_LOGIN_VERCEL
               value: "http://api.prueba.com:32339/"
             - name: PORT
-              value: {{ .Values.service.port }}
+              value: "{{ .Values.service.port }}"
             - name: HOST_API
               value: "127.0.0.1"
             - name: PORT_API

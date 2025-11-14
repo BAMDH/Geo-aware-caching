@@ -1,5 +1,5 @@
 name: zonal-cache
-replicaCount: 1 # Número de pods
+replicaCount: 2 # Número de pods
 image:
   repository: kendallrc/zonal-cache
   tag: latest
@@ -7,7 +7,7 @@ image:
 service:
   type: NodePort
   port: 8080
-  protocol: UDP
+  protocol: TCP
 
 resources:
   limits:

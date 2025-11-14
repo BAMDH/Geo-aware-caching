@@ -41,39 +41,63 @@ int extract_host(const char *buffer, ssize_t len, char *out) {
 
 // --- Función que maneja el cliente, es utilizada por cada thread ---
 void* handle_client(void* arg) {
-    thread_arg_t *targ = (thread_arg_t*)arg;
+
+    thread_arg_t *targ = (thread_arg_t*) arg;
+    int fd = targ->client_fd;
+
+    char buffer[BUFFER_SIZE];
+    ssize_t total = 0;
+
+    // Leer hasta recibir \r\n\r\n (fin de headers)
+    while (1) {
+        ssize_t n = recv(fd, buffer + total, sizeof(buffer) - total - 1, 0);
+        if (n <= 0) break;
+
+        total += n;
+        buffer[total] = '\0';
+
+        // Si ya llegó el final del header
+        if (strstr(buffer, "\r\n\r\n")) {
+            break;
+        }
+    }
+
+    // Guardar el request completo en targ
+    targ->len = total;
+    memcpy(targ->buffer, buffer, total);
+    targ->buffer[total] = '\0';
+
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &targ->client_addr.sin_addr, client_ip, sizeof(client_ip));
 
     int key_session = 0;
 
     char* response_api = NULL;
-
     char* ip_service;
 
     char response[2048];
 
-    params_t params = {0};  // inicializa todo a cero, los arrays quedan con '\0'
+    params_t params = {0};
 
     extract_host(targ->buffer, targ->len, params.domain);
 
     printf("El domain obtenido es de %s\n", params.domain);
     fflush(stdout);
 
-    //response_api = call_api(params, "domain/type_auth");
-
-    //parse_host_json(response_api, &params);
-
-    // endpoint recibe domain
-    //response_api = call_api(params, "domain/config");
-
-    // funcion de brandon, enviar config de la api
+    //response_api = call_api(params, "domain/type_auth"); 
+    
+    //parse_host_json(response_api, &params); 
+    
+    // endpoint recibe domain 
+    //response_api = call_api(params, "domain/config"); 
+    
+    // funcion de brandon, enviar config de la api 
     //set_config(response_api);
 
     strncpy(params.type_auth, "session_id", TYPE_AUTH - 1);
-    params.type_auth[TYPE_AUTH - 1] = '\0';  // asegurar terminación nula
+    params.type_auth[TYPE_AUTH - 1] = '\0';
 
-    if(params.type_auth[0] == '\0'){
+    if (params.type_auth[0] == '\0') {
 
         snprintf(response, sizeof(response),
             "HTTP/1.1 400 Bad Request\r\n"
@@ -84,31 +108,32 @@ void* handle_client(void* arg) {
             strlen("Error: host no encontrado\n")
         );
 
+    } else if (strcmp(params.type_auth, "x-api-key") == 0) {
 
-    }
+        key_session = extract_key_session(
+            targ->buffer, targ->len, "x-api-key",
+            params.api_key, API_KEY_SIZE
+        );
 
-    else if(strcmp(params.type_auth, "x-api-key") == 0){
-        key_session = extract_key_session(targ->buffer, targ->len, "x-api-key", params.api_key, 
-            API_KEY_SIZE);
         printf("La api key extraida es %s\n", params.api_key);
         fflush(stdout);
-        
-    }
 
-    else {
-        key_session = extract_key_session(targ->buffer, targ->len, "session_id", params.session_id, 
-            SESSION_ID_SIZE);
+    } else {
+        key_session = extract_key_session(
+            targ->buffer, targ->len, "session_id",
+            params.session_id, SESSION_ID_SIZE
+        );
+
         printf("El session_id extraido es %s\n", params.session_id);
         fflush(stdout);
-
     }
 
-    if(key_session == -1){
+    if (key_session == -1) {
 
-        printf("Se va a redirigir a vercel");
+        printf("Se va a redirigir a vercel\n");
         fflush(stdout);
 
-        if(strcmp(params.type_auth, "x-api-key") == 0){
+        if (strcmp(params.type_auth, "x-api-key") == 0) {
 
             snprintf(response, sizeof(response),
                 "HTTP/1.1 401 Unauthorized\r\n"
@@ -118,11 +143,9 @@ void* handle_client(void* arg) {
                 "Error: no se envió autenticación\n",
                 strlen("Error: no se envió autenticación\n")
             );
-        }
 
-        else{
-            
-            // Se redirige al login en vercel
+        } else {
+
             snprintf(response, sizeof(response),
                 "HTTP/1.1 302 Found\r\n"
                 "Location: %s\r\n"
@@ -131,25 +154,19 @@ void* handle_client(void* arg) {
                 "\r\n",
                 url_login_vercel
             );
-        
         }
-      
-    }
 
-    else if(key_session == 1){
+    } else if (key_session == 1) {
 
         response_api = call_api(&params, "domain/validate/key_session");
 
-        if(response_api != NULL){
+        if (response_api != NULL) {
 
             ip_service = call_api(&params, "domain/ip");
-            
-            // Realizar solicitud al servicio requerido
-   
 
-        }
+            // Aquí llamarías al servicio backend
 
-        else{
+        } else {
 
             snprintf(response, sizeof(response),
                 "HTTP/1.1 401 Unauthorized\r\n"
@@ -160,16 +177,13 @@ void* handle_client(void* arg) {
                 "Error: autenticacion invalida\n",
                 strlen("Error: autenticacion invalida\n")
             );
-
         }
-
     }
 
-    // Respuesta HTTP simple
-    
-    write(targ->client_fd, response, strlen(response));
+    // Enviar respuesta
+    write(fd, response, strlen(response));
 
-    close(targ->client_fd);
+    close(fd);
     free(targ);
-    pthread_exit(NULL);
+    return NULL;
 }
