@@ -24,8 +24,51 @@ char* call_api(params_t *params, const char* endpoint) {
     snprintf(auth_header, sizeof(auth_header), "cache-api-key: %s", cache_api_key);
     headers = curl_slist_append(headers, auth_header);
 
+    if (strcasecmp(endpoint, "cache/register") == 0) {
+
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        snprintf(url, sizeof(url), "http://%s:%s/cache/register", HOST_API, PORT_API);
+
+        // Construir JSON con los datos del cache
+        char post_fields[1024];
+        snprintf(post_fields, sizeof(post_fields),
+            "{"
+                "\"cache_name\": \"%s\", "
+                "\"country\": \"%s\", "
+                "\"ip\": \"%s\", "
+                "\"latitude\": %.6f, "
+                "\"longitude\": %.6f"
+            "}",
+            params->cache.cache_name,
+            params->cache.country,
+            params->cache.ip,
+            params->cache.latitude,
+            params->cache.longitude
+        );
+
+        printf("\n[DEBUG] JSON enviado a la API:\n%s\n", post_fields);
+        fflush(stdout);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);           
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);            
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    }
+
+    else if (strcasecmp(endpoint, "domain/config") == 0) {
+        snprintf(url, sizeof(url), "http://%s:%s/domain/config?domain=%s",
+                HOST_API, PORT_API, params->domain);
+        printf("\nSe envia a la API el url: %s", url);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    } 
+
     // Se llama al metodo GET tipo de autenticacion del dominio
-    if (strcasecmp(endpoint, "domain/type_auth") == 0) {
+    else if (strcasecmp(endpoint, "domain/type_auth") == 0) {
         snprintf(url, sizeof(url), "http://%s:%s/domain/type_auth?domain=%s",
                 HOST_API, PORT_API, params->domain);
         printf("\nSe envia a la API el url: %s", url);
@@ -42,7 +85,7 @@ char* call_api(params_t *params, const char* endpoint) {
         char auth_client_header[128];
 
         // Caso para enviar api key
-        if (params->session_id != NULL){
+        if (params->session_id != '\0'){
             snprintf(url, sizeof(url), "http://%s:%s/domain/validate/session_id?domain=%s&subdomain=%s",
                     HOST_API, PORT_API, params->domain, params->subdomain);
             

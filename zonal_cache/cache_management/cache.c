@@ -1,28 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <ctype.h>
-#include <time.h>
-#include "cJSON.h"
-#include <curl/curl.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include "base_64.h" 
-#ifdef _WIN32
-#include <direct.h>  // Windows
-#else
-#include <sys/stat.h> // Linux/Unix
-#include <sys/types.h>
-#endif
-
-typedef struct {
-    char dominio[256];
-    char filename[256];
-    char *contenido;
-    long size;
-} ArchivoInfo;
+#include "cache.h"
 
 //convierte mb y kb a bytes
 long convertir_a_bytes(const char *size) {
@@ -540,7 +516,7 @@ char *get_file(const char * dominio,const char *url){
     }
 
     char *content = get_file_content(dominio,filename);
-    conten =base64_encode((const unsigned char *)content, strlen(content))
+    content =base64_encode((const unsigned char *)content, strlen(content));
     return content;
 }
 /*

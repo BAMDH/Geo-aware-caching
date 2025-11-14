@@ -22,7 +22,11 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
               protocol: {{ .Values.service.protocol }}
-          
+          env:
+            - name: HOST_API
+              value: "host.docker.internal"
+            - name: PORT_API
+              value: "3000"
 
               
      

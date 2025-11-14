@@ -108,11 +108,9 @@ dns_response_t handle_dns(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns
     params_t params;
     params.ip_source = strdup(ip_source); // copia segura si es necesario
 
-    char endpoint[] = "ip_cache"; // Endpoint a consultar
+    char endpoint[] = "domain/ip_cache"; // Endpoint a consultar
 
-    //char* response_api = call_api(&params, endpoint, "GET");
-
-    char *response_api = "89.233.29.12";
+    char* response_api = call_api(&params, endpoint, "GET");
 
     printf("El response de api es %s", response_api);
     fflush(stdout);
@@ -143,7 +141,7 @@ dns_response_t handle_dns(unsigned char dns_packet[BUFFER_SIZE], ssize_t len_dns
    
     // Liberar memoria
 
-    //free(response_api);
+    free(response_api);
   
     return dns_response;
 

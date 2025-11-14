@@ -2,6 +2,8 @@
 #include "server.h"
 
 ///////////////////////////////// Main ////////////////////////////////////////////
+const char *host_api;
+const char *port_api;
 
 int main() {
     int sockfd;
@@ -27,6 +29,9 @@ int main() {
         close(sockfd);
         exit(EXIT_FAILURE);
     }
+
+    host_api = getenv("HOST_API");
+    port_api = getenv("PORT_API");
 
     printf("Servidor UDP escuchando en el puerto %d...\n", PORT);
 

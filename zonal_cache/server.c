@@ -6,8 +6,6 @@
 
 //////////////////////////// Comunicarse con el cliente /////////////////////////////////
 
-
-
 int extract_host(const char *buffer, ssize_t len, char *out) {
    
     fwrite(buffer, 1, len, stdout);
@@ -53,15 +51,9 @@ void* handle_client(void* arg) {
 
     char* ip_service;
 
-    const char *response;
+    char response[2048];
 
     params_t params = {0};  // inicializa todo a cero, los arrays quedan con '\0'
-
-    printf("Entra al server\n");
-    fflush(stdout);
-
-    printf("El buffer es  %s\n", targ->buffer);
-    fflush(stdout);
 
     extract_host(targ->buffer, targ->len, params.domain);
 
@@ -70,22 +62,28 @@ void* handle_client(void* arg) {
 
     //response_api = call_api(params, "domain/type_auth");
 
-    parse_host_json(response_api, &params);
-
-    strcpy(params.type_auth,"x-api-key");
+    //parse_host_json(response_api, &params);
 
     // endpoint recibe domain
-    response_api = call_api(params, "domain/config");
+    //response_api = call_api(params, "domain/config");
+
+    // funcion de brandon, enviar config de la api
+    //set_config(response_api);
+
+    strncpy(params.type_auth, "session_id", TYPE_AUTH - 1);
+    params.type_auth[TYPE_AUTH - 1] = '\0';  // asegurar terminación nula
 
     if(params.type_auth[0] == '\0'){
 
-        // Respuesta HTTP simple
-        response = 
-        "HTTP/1.1 400 Bad Request\r\n"
-        "Content-Length: 23\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "Error: host no encontrado\n";
+        snprintf(response, sizeof(response),
+            "HTTP/1.1 400 Bad Request\r\n"
+            "Content-Length: %zu\r\n"
+            "Content-Type: text/plain\r\n"
+            "\r\n"
+            "Error: host no encontrado\n",
+            strlen("Error: host no encontrado\n")
+        );
+
 
     }
 
@@ -102,22 +100,45 @@ void* handle_client(void* arg) {
             SESSION_ID_SIZE);
         printf("El session_id extraido es %s\n", params.session_id);
         fflush(stdout);
+
     }
 
     if(key_session == -1){
 
-        // Respuesta HTTP simple
-        response =  
-        "HTTP/1.1 401 Unauthorized\r\n"
-        "Content-Length: 38\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "Error: no se envió autenticación\n";
+        printf("Se va a redirigir a vercel");
+        fflush(stdout);
+
+        if(strcmp(params.type_auth, "x-api-key") == 0){
+
+            snprintf(response, sizeof(response),
+                "HTTP/1.1 401 Unauthorized\r\n"
+                "Content-Length: %zu\r\n"
+                "Content-Type: text/plain\r\n"
+                "\r\n"
+                "Error: no se envió autenticación\n",
+                strlen("Error: no se envió autenticación\n")
+            );
+        }
+
+        else{
+            
+            // Se redirige al login en vercel
+            snprintf(response, sizeof(response),
+                "HTTP/1.1 302 Found\r\n"
+                "Location: %s\r\n"
+                "Content-Length: 0\r\n"
+                "Connection: close\r\n"
+                "\r\n",
+                url_login_vercel
+            );
+        
+        }
+      
     }
 
     else if(key_session == 1){
 
-        //response_api = call_api(&params, "domain/validate/key_session");
+        response_api = call_api(&params, "domain/validate/key_session");
 
         if(response_api != NULL){
 
@@ -130,13 +151,16 @@ void* handle_client(void* arg) {
 
         else{
 
-            // Respuesta HTTP simple
-            response = 
-            "HTTP/1.1 401 Unauthorized\r\n"
-            "Content-Length: 38\r\n"
-            "Content-Type: text/plain\r\n"
-            "\r\n"
-            "Error: autenticacion invalida\n";
+            snprintf(response, sizeof(response),
+                "HTTP/1.1 401 Unauthorized\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: %zu\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "Error: autenticacion invalida\n",
+                strlen("Error: autenticacion invalida\n")
+            );
+
         }
 
     }

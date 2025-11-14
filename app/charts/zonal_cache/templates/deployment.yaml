@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+    spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: {{ .Values.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              protocol: {{ .Values.service.protocol }}
+          env:
+            - name: SERVICE_API_KEY
+              value: "prueba"
+            - name: URL_LOGIN_VERCEL
+              value: "http://api.prueba.com:32339/"
+            - name: PORT
+              value: {{ .Values.service.port }}
+            - name: HOST_API
+              value: "127.0.0.1"
+            - name: PORT_API
+              value: "3000"
+
+              
+     

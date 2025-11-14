@@ -1,33 +1,6 @@
 #include "common.h"
 #include "auth.h"
 
-// --- Función para decodificar Base64 usando OpenSSL ---
-unsigned char* base64_decode(const char* input, size_t* out_len) {
-    BIO *b64 = BIO_new(BIO_f_base64());
-    BIO *bmem = BIO_new_mem_buf(input, -1);
-    bmem = BIO_push(b64, bmem);
-
-    BIO_set_flags(bmem, BIO_FLAGS_BASE64_NO_NL);
-
-    int input_len = strlen(input);
-    unsigned char *buffer = (unsigned char*)malloc(input_len); 
-    if (!buffer) {
-        BIO_free_all(bmem);
-        return NULL;
-    }
-
-    int decoded_len = BIO_read(bmem, buffer, input_len);
-    if (decoded_len < 0) {
-        free(buffer);
-        BIO_free_all(bmem);
-        return NULL;
-    }
-
-    *out_len = decoded_len;
-    BIO_free_all(bmem);
-    return buffer;
-}
-
 // Extrae el session_id del header Authorization: Bearer <session_id> o 
 // el api key del header 
 int extract_key_session(const char *buf, size_t len, const char* type, char *out, 

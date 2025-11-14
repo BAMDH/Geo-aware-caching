@@ -1,4 +1,5 @@
 #include "api.h"
+#include "common.h"
 
 /////////////////////////// Comunicarse con el API //////////////////////////////////
 
@@ -16,12 +17,10 @@ char* call_api(params_t *params, const char* endpoint, const char* method) {
 
     char url[512];
     char body[2048] = ""; // para POST
-    char host[] = "dns-api-sv"; // host.docker.internal
-    char port[] = "5000";
-
+    
     if (strcasecmp(method, "GET") == 0) {
         snprintf(url, sizeof(url), "http://%s:%s/%s/%s",
-                 host, port, endpoint, params->ip_source);
+                 host_api, port_api, endpoint, params->ip_source);
         printf("\nSe envia a la API el url: %s", url);
     
         curl_easy_setopt(curl, CURLOPT_URL, url);

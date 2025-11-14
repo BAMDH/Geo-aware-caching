@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "common.h": "c",
-        "auth.h": "c"
+        "auth.h": "c",
+        "cjson.h": "c",
+        "cache.h": "c",
+        "time.h": "c"
     }
 }

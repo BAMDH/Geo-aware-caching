@@ -16,6 +16,9 @@
 #define PORT 53       // Puerto de prueba (evita 53)
 #define BUFFER_SIZE 512  // Tamaño típico de paquete DNS
 
+extern const char *host_api;
+extern const char *port_api;
+
 // --- Struct para el threat que maneja el cliente ---
 typedef struct {
     int sockfd;
