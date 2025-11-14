@@ -9,7 +9,7 @@ const ANIMATION_CLASSES = {
 };
 
 const Dialog = ({
-    type = "confirm",   // "confirm" | "info"
+    type = "confirm",   // "confirm" | "info" | "form"
     open,               // boolean -> controlar apertura externa
     onOpenChange,       // callback para abrir/cerrar
     title = "Are you sure?",
@@ -19,6 +19,8 @@ const Dialog = ({
     onConfirm,
     trigger = null,      // elemento opcional que abre el dialog (puede ser null)
     okLabel = "OK",      // solo para type="info"
+    children,            // solo para type="form"
+    isLoading = false,   // solo para type="form"
 }) => {
 
     const baseButtonClasses = "inline-flex items-center justify-center h-[35px] px-[15px] text-[15px] font-semibold rounded-[4px] select-none cursor-pointer transition-colors duration-200 ease-in-out";
@@ -41,10 +43,17 @@ const Dialog = ({
                         {title}
                     </AlertDialog.Title>
 
-                    <AlertDialog.Description className="mb-5 text-[15px] leading-relaxed text-gray-700">
-                        {description}
+                    <AlertDialog.Description
+                        className={`mb-5 text-[15px] leading-relaxed text-gray-700 ${
+                            type === "form" ? 'sr-only' : ''
+                        }`}
+                    >
+                        {type === "form"
+                            ? `Formulario para ${title.toLowerCase()}.`
+                            : description}
                     </AlertDialog.Description>
 
+                    {type === "form" && <div className="mt-4 mb-5">{children}</div>}
                     <div className="flex justify-end gap-6">
                         {type === "confirm" ? (
                         <>
@@ -59,7 +68,13 @@ const Dialog = ({
                                 </button>
                             </AlertDialog.Action>
                         </>
-                        ) : (
+                        ) : type === "form" ? (
+                            <>
+                                <button className={cancelButtonClasses} onClick={() => onOpenChange(false)} disabled={isLoading}>
+                                    {cancelLabel}
+                                </button>
+                            </>
+                            ) : (
                         <AlertDialog.Cancel asChild>
                             <button className={confirmButtonClasses} onClick={() => onOpenChange(false)}>
                                 {okLabel}

@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import { db } from "../utils/firebase.js";
 import crypto from "crypto";
 import dns from "dns";
@@ -372,11 +373,6 @@ export async function deleteUrl(req, res) {
 }
 
 // *********************************** API KEYS *********************************** //
-// Generar un token único y seguro para la API Key
-function generateApiKeyString() {
-    return crypto.randomBytes(24).toString('hex');
-}
-
 // Crear una nueva API Key para una URL específica
 export async function createApiKey(req, res) {
     try {
@@ -400,10 +396,9 @@ export async function createApiKey(req, res) {
             return res.status(400).json({ error: "El patrón de URL no está configurado para usar autenticación API Key." });
         }
 
-        const newApiKey = generateApiKeyString();
         const newKeyObject = {
             id: crypto.randomBytes(8).toString('hex'),
-            key: newApiKey,
+            key: crypto.randomBytes(24).toString('hex'),
         };
         urlConfig.keys = urlConfig.keys || [];
         urlConfig.keys.push(newKeyObject);
@@ -416,7 +411,7 @@ export async function createApiKey(req, res) {
         res.status(201).json({
             message: "API Key generada correctamente. **Guárdela ahora, no se volverá a mostrar**.",
             id: newKeyObject.id,
-            apiKey: newApiKey,
+            apiKey: newKeyObject.key,
             urlPattern: urlPattern,
         });
     } catch (error) {
@@ -541,4 +536,158 @@ export async function verifyAccessApiKey(req, res) {
         console.error("Error en la verificación de API Key para el Cache Zonal:", error);
         res.status(500).json({ valid: false, message: "Error interno del servidor durante la verificación." });
     }
+}
+
+
+// *********************************** USERPASS *********************************** //
+// Crear un userpass para una URL específica
+export async function createUserPass(req, res) {
+    try {
+        const { domainId } = req.params;
+        const { urlPattern, username, password } = req.body;
+
+        if (!domainId || !urlPattern || !username || !password) {
+            return res.status(400).json({ error: "Datos incompletos: domainId, urlPattern, username y password son requeridos." });
+        }
+
+        const domainDocRef = domainsRef.doc(domainId);
+        const domainDoc = await domainDocRef.get();
+
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Dominio no encontrado o acceso denegado." });
+        }
+
+        let currentUrls = domainDoc.data().urls || [];
+        const urlIndex = currentUrls.findIndex(item => item.url === urlPattern);
+
+        if (urlIndex === -1) {
+            return res.status(404).json({ error: "Patrón de URL no encontrado." });
+        }
+
+        const urlConfig = currentUrls[urlIndex];
+        if (urlConfig.typeAuth !== "userpass") {
+            return res.status(400).json({ error: "El patrón de URL no está configurado para usar autenticación User/Pass." });
+        }
+
+        // Inicializar o verificar la estructura de usuarios
+        urlConfig.users = urlConfig.users || [];
+
+        // Verificar si el usuario ya existe en esta URL
+        if (urlConfig.users.some(user => user.username === username)) {
+            return res.status(400).json({ error: `El usuario '${username}' ya existe para esta URL.` });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        // Crear el nuevo objeto de usuario con la contraseña hasheada
+        const newUserObject = {
+            id: crypto.randomBytes(8).toString('hex'),
+            username: username,
+            password: hashedPassword,
+        };
+
+        urlConfig.users.push(newUserObject);
+        currentUrls[urlIndex] = urlConfig;
+
+        await domainDocRef.update({ urls: currentUrls });
+
+        res.status(201).json({
+            message: `Usuario '${username}' creado correctamente para ${urlPattern}.`,
+        });
+
+    } catch (error) {
+        console.error("Error al crear User/Pass:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// Obtener los userpass
+export async function getUserPass(req, res) {
+    try {
+        const { domainId } = req.params;
+        const domainDoc = await domainsRef.doc(domainId).get();
+
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado." });
+        }
+
+        const domainData = domainDoc.data();
+        const allUrls = domainData.urls || [];
+
+        let allUsers = [];
+
+        allUrls.forEach(urlConfig => {
+            if (urlConfig.typeAuth === "userpass" && urlConfig.users) {
+                const urlUsers = (urlConfig.users || [])
+                    .map(user => {
+                        return {
+                            id: user.id,
+                            username: user.username,
+                            urlPattern: urlConfig.url,
+                        };
+                    });
+                allUsers = allUsers.concat(urlUsers);
+            }
+        });
+
+        res.json(allUsers);
+
+    } catch (error) {
+        console.error("Error al obtener User/Pass:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// TODO: Editar un userpass
+
+// Eliminar un userpass
+export async function deleteUserPass(req, res) {
+    try {
+        const { domainId } = req.params;
+        const { userId } = req.body;
+
+        if (!domainId || !userId) {
+            return res.status(400).json({ error: "Faltan parámetros: domainId y userId son requeridos." });
+        }
+
+        const domainDocRef = domainsRef.doc(domainId);
+        const domainDoc = await domainDocRef.get();
+
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado o dominio no encontrado." });
+        }
+
+        let currentUrls = domainDoc.data().urls || [];
+        let userFound = false;
+
+        currentUrls = currentUrls.map(urlConfig => {
+            if (urlConfig.typeAuth === "userpass" && urlConfig.users && urlConfig.users.length > 0) {
+
+                const initialLength = urlConfig.users.length;
+
+                // Filtrar el usuario que coincide con el ID
+                urlConfig.users = urlConfig.users.filter(userObj => userObj.id !== userId);
+                if (urlConfig.users.length < initialLength) {
+                    userFound = true;
+                }
+            }
+            return urlConfig;
+        });
+
+        if (!userFound) {
+            return res.status(404).json({ error: "Usuario no encontrado para este dominio." });
+        }
+
+        await domainDocRef.update({ urls: currentUrls });
+
+        res.json({ message: "Usuario eliminado correctamente." });
+
+    } catch (error) {
+        console.error("Error al eliminar User/Pass:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
+
+// TODO: Verificar una User Pass para acceso al Cache Zonal
+export async function verifyUserPass(req, res) {
+
 }
