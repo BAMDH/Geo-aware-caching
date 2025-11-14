@@ -16,7 +16,8 @@ app.use(
     cors({
         origin: [
             "https://p02uiapp.vercel.app", // tu frontend en producción
-            "http://localhost:5173"        // para desarrollo local    
+            "http://localhost:5173",       // para desarrollo local
+            "http://localhost:5174"
         ],
         credentials: true,
     })
