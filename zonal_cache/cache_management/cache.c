@@ -25,52 +25,21 @@ long convertir_a_bytes(const char *size) {
         return -1; 
 }
 
-// Crea la configuracion inicial del dominio
-bool set_config(const char *dominio, const char *size,  const char *type, const char *file_type) {
+//guarda cambios en la configuracion
+void save_config_json(const char *dominio, cJSON *root) {
     char path[512];
+    snprintf(path, sizeof(path), "%s/config.json", dominio);
 
-    // Crear ruta de carpeta igual al dominio
-    snprintf(path, sizeof(path), "%s", dominio);
-#ifdef _WIN32
-    _mkdir(path);
-#else
-        mkdir(path, 0755);
-#endif
-    cJSON *root = cJSON_CreateObject();
-    if (!root) return false;
-
-    cJSON_AddNumberToObject(root, "total_size", convertir_a_bytes(size));
-    cJSON_AddNumberToObject(root, "used", 0);  
-    cJSON_AddStringToObject(root, "type", type); 
-    cJSON *files = cJSON_CreateArray();     
-    cJSON_AddItemToObject(root, "files", files);
-
-    char *json_str = cJSON_Print(root);
-    if (!json_str) {
-        cJSON_Delete(root);
-        return false;
-    }
-
-    // guardar en disco
-    char archivo[1024];
-    snprintf(archivo, sizeof(archivo), "%s/config.json", path);
-
-    FILE *fp = fopen(archivo, "w");
+    FILE *fp = fopen(path, "w");
     if (!fp) {
-        perror("Error al crear archivo JSON");
-        free(json_str);
-        cJSON_Delete(root);
-        return false;
+        perror("Error al guardar JSON");
+        return;
     }
 
-    fprintf(fp, "%s\n", json_str);
+    char *string = cJSON_Print(root);
+    fputs(string, fp);
     fclose(fp);
-
-    // Liberar memoria
-    free(json_str);
-    cJSON_Delete(root);
-
-    return true;
+    free(string);
 }
 
 // Obtiene el json de configuracion
@@ -109,22 +78,98 @@ cJSON *get_config_json(const char *dominio) {
     return root;
 }
 
-//guarda cambios en la configuracion
-void save_config_json(const char *dominio, cJSON *root) {
-    char path[512];
-    snprintf(path, sizeof(path), "%s/config.json", dominio);
+// Crea la configuracion inicial del dominio
+bool set_subconfig(const char *dominio, const char *subdominio, const char *size,  const char *type, char **file_types, int ftsize) {
+    size_t len_total = strlen(dominio) + strlen(subdominio) + 2;
+    char *path = malloc(len_total);
 
-    FILE *fp = fopen(path, "w");
-    if (!fp) {
-        perror("Error al guardar JSON");
-        return;
+    snprintf(path, len_total, "%s.%s", subdominio,dominio);
+    mkdir(path, 0755);
+
+    cJSON *root = cJSON_CreateObject();
+   
+    //config anterior
+    
+    cJSON *prev_root = get_config_json(path);
+    cJSON *prev_files = NULL;
+    int prev_used = 0;
+    const char *prev_type_str = NULL;
+    bool same_type = false;
+    if (prev_root) {
+        cJSON *used_item = cJSON_GetObjectItem(prev_root, "used");
+        prev_used = used_item->valueint;
+        prev_files = cJSON_GetObjectItem(prev_root, "files");
+        cJSON *prev_type = cJSON_GetObjectItem(prev_root, "type");
+        prev_type_str = prev_type->valuestring;
+         if (strcmp(prev_type_str, type) == 0) {
+            same_type = true;
+        }
     }
+   
 
-    char *string = cJSON_Print(root);
-    fputs(string, fp);
-    fclose(fp);
-    free(string);
+
+    cJSON_AddNumberToObject(root, "total_size", convertir_a_bytes(size));
+    cJSON_AddStringToObject(root, "type", type); 
+    cJSON *ftarray = cJSON_CreateArray();
+    for (int i = 0; i < ftsize; i++) {
+        cJSON_AddItemToArray(ftarray, cJSON_CreateString(file_types[i]));
+    }
+    cJSON_AddItemToObject(root, "file_types", ftarray);
+    if (same_type) {
+            cJSON_AddNumberToObject(root, "used", prev_used);
+            cJSON_AddItemToObject(root, "files", cJSON_Duplicate(prev_files, 1));
+    } 
+    else {
+            cJSON_AddNumberToObject(root, "used", 0);
+            cJSON_AddItemToObject(root, "files", cJSON_CreateArray());
+        }
+
+    save_config_json(path, root);
+    
+
+    // Liberar memoria
+
+    cJSON_Delete(root);
+    free(path);
+    return true;
 }
+
+//recibe todos los subdominios
+bool set_config(const char *json_str) {
+    cJSON *root = cJSON_Parse(json_str);
+    cJSON *domain = cJSON_GetObjectItem(root, "domain");
+    cJSON *cacheLimit = cJSON_GetObjectItem(root, "cacheLimit");
+    cJSON *urls = cJSON_GetObjectItem(root, "urls");
+    int url_count = cJSON_GetArraySize(urls);
+    for (int i = 0; i < url_count; i++) {
+
+        cJSON *urlObj = cJSON_GetArrayItem(urls, i);
+        cJSON *cacheSize = cJSON_GetObjectItem(urlObj, "cacheSize");
+        cJSON *fileTypes = cJSON_GetObjectItem(urlObj, "fileTypes");
+        cJSON *ip = cJSON_GetObjectItem(urlObj, "ip");
+        cJSON *replacementPolicy = cJSON_GetObjectItem(urlObj, "replacementPolicy");
+        cJSON *url = cJSON_GetObjectItem(urlObj, "url");
+
+        int size = cJSON_GetArraySize(fileTypes);
+        char **fileTypesArray = malloc(sizeof(char*) * size);
+        for (int i = 0; i < size; i++) {
+            cJSON *ft = cJSON_GetArrayItem(fileTypes, i);
+            if (cJSON_IsString(ft)) {
+                fileTypesArray[i] = strdup(ft->valuestring);
+            }
+        }
+        set_subconfig(domain->valuestring,url->valuestring,cacheSize->valuestring,replacementPolicy->valuestring,fileTypesArray,size);
+        for (int i = 0; i < size; i++) free(fileTypesArray[i]);
+        free(fileTypesArray);
+    }
+    cJSON_Delete(root);
+    return true;
+}
+
+
+
+
+
 
 // Confirma que haya suficiente espacio
 bool is_enough_space(const char *dominio, long file_size) {
@@ -161,17 +206,61 @@ bool file_exists(const char *dominio, const char *filename) {
     cJSON *files = cJSON_GetObjectItem(root, "files");
     bool found = false;
     int count = cJSON_GetArraySize(files);
+    cJSON *type = cJSON_GetObjectItem(root, "type");
+    char *aux =type->valuestring;
     for (int i = 0; i < count; i++) {
         cJSON *sub = cJSON_GetArrayItem(files, i); 
             cJSON *name= cJSON_GetArrayItem(sub, 0);
             if (strcmp(name->valuestring, filename) == 0) {
                 found = true;
+                if ((strcmp(aux, "LRU") == 0)||(strcmp(aux, "MRU") == 0)){
+                    time_t now = time(NULL); 
+                    char buffer[64];
+                    struct tm *t = localtime(&now);
+                    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
+                    cJSON_ReplaceItemInArray(sub, 2, cJSON_CreateString(buffer));
+                }
+                else if (strcmp(aux, "LFU") == 0){
+                    cJSON *aux2= cJSON_GetArrayItem(sub, 2);
+                    cJSON_ReplaceItemInArray(sub, 2,  cJSON_CreateNumber(aux2->valueint+1));
+                }
                 break;
             }  
+    }
+    save_config_json(dominio, root);
+    cJSON_Delete(root);
+    return found;
+}
+
+// confirma si el archivo es compatible
+bool compatibility(const char *dominio, const char *filename) {
+    cJSON *root = get_config_json(dominio);
+    cJSON *file_types = cJSON_GetObjectItem(root, "file_types");
+    bool found = false;
+    const char *extension = strrchr(filename, '.');
+    char suposicion[6];
+    //si no tiene extension se supone que es html
+    if (!extension || *(extension+1) == '\0') {
+        strcpy(suposicion, "html");
+        extension = suposicion;
+    } else {
+        extension++; 
+    }
+    int count = cJSON_GetArraySize(file_types);
+    for (int i = 0; i < count; i++) {
+        cJSON *ft = cJSON_GetArrayItem(file_types, i);
+        if (cJSON_IsString(ft) && strcmp(ft->valuestring, extension) == 0) {
+            found = true;
+        }
     }
     cJSON_Delete(root);
     return found;
 }
+    
+
+   
+
+
 
 // borra archivo en disco
 bool delete_file(const char *dominio,const char *filename){
@@ -392,10 +481,6 @@ bool add_file(const char *dominio, const char *filename, const char *contenido, 
 
 }
 
-
-
-
-
 // escribe el struct info
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t total_size = size * nmemb;
@@ -415,21 +500,13 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
     return total_size;
 }
 
-
-ArchivoInfo *get_file_from_url(const char *dominio, const char *url) {
+//obtiene el archivo del enlace
+ArchivoInfo *get_file_from_url(const char *filename, const char *url) {
     CURL *curl;
     CURLcode res;
 
     ArchivoInfo *info = calloc(1, sizeof(ArchivoInfo));
     if (!info) return NULL;
-
-    strncpy(info->dominio, dominio, sizeof(info->dominio) - 1);
-    const char *filename = strrchr(url, '/');
-    if (filename) filename++;
-    printf("URL: %-30s → filename: %s\n", url, filename);
-    if (strcmp(filename, dominio) == 0)
-        filename = "index.html";
-    printf("URL: %-30s → filename: %s\n", url, filename);
     strncpy(info->filename, filename, sizeof(info->filename) - 1);
 
     info->contenido = NULL;
@@ -447,7 +524,8 @@ ArchivoInfo *get_file_from_url(const char *dominio, const char *url) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)info);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); 
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L); 
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
         fprintf(stderr, "Error al descargar: %s\n", curl_easy_strerror(res));
@@ -491,185 +569,38 @@ char *get_file_content(const char *dominio, const char *filename) {
     return buffer;
 }
 
-
 //devuelve el archivo pedido
-char *get_file(const char * dominio,const char *url){
-     
+char *get_file(const char * dominio,const char * subdominio,const char *url){
+    srand(time(NULL));
+    size_t len_total = strlen(dominio) + strlen(subdominio) + 2;
+    char *path = malloc(len_total);
+    snprintf(path, len_total, "%s.%s", subdominio,dominio);
     const char *filename = strrchr(url, '/');
-    if (filename) filename++;
-       printf("URL: %-30s → filename: %s\n", url, filename);
-    if (strcmp(filename, dominio) == 0)
+    char *content ="";
+    filename++;
+    if ((strcmp(filename, dominio) == 0)||(strcmp(filename, path) == 0)){
         filename = "index.html";
-       printf("URL: %-30s → filename: %s\n", url, filename);
-    if (!file_exists(dominio,filename)){
-        ArchivoInfo *info = get_file_from_url(dominio, url);
-        if (!info) {
-            fprintf(stderr, "Error: no se pudo obtener el archivo desde la URL.\n");
-            return NULL;
+    }
+    bool comp = compatibility(path, filename);
+    if (!comp || !file_exists(path,filename)){
+        ArchivoInfo *info = get_file_from_url(filename, url);
+        if(comp){
+            add_file(path, info->filename, info->contenido, info->size); 
+        } else{
+            content = malloc(info->size + 1);
+            memcpy(content, info->contenido, info->size);
+            content[info->size] = '\0';
+    
         }
-        bool done = add_file(dominio, info->filename, info->contenido, info->size); 
-        if (!done){
-            return NULL;
-        } 
+        
         free(info->contenido);
         free(info); 
     }
 
-    char *content = get_file_content(dominio,filename);
+    if(comp){
+        content = get_file_content(path,filename);
+    }
     content =base64_encode((const unsigned char *)content, strlen(content));
+    free(path);
     return content;
 }
-/*
-
-
-#define PORT 8080
-#define BUFFER_SIZE 1024
-
-int main() {
-    int sockfd;
-    struct sockaddr_in server_addr, client_addr;
-    char buffer[BUFFER_SIZE];
-    socklen_t addr_len = sizeof(client_addr);
-
-    // Crear socket UDP
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("Error creando socket");
-        exit(EXIT_FAILURE);
-    }
-
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
-
-    if (bind(sockfd, (const struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Error en bind");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Servidor UDP escuchando en puerto %d...\n", PORT);
-
-    while (1) {
-        memset(buffer, 0, BUFFER_SIZE);
-        recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
-                 (struct sockaddr *)&client_addr, &addr_len);
-
-        // buffer contiene "dominio url"
-        char dominio[256], url[512];
-        if (sscanf(buffer, "%255s %511s", dominio, url) != 2) {
-            const char *err = "Formato incorrecto. Use: <dominio> <url>";
-            sendto(sockfd, err, strlen(err), 0,
-                   (struct sockaddr *)&client_addr, addr_len);
-            continue;
-        }
-
-        printf("Dominio: %s\n", dominio);
-        printf("URL: %s\n", url);
-
-        // 🔹 Llamar a tu función
-        char *contenido = get_file(dominio, url);
-
-        if (contenido == NULL) {
-            const char *err = "Error: no se pudo obtener el archivo.";
-            sendto(sockfd, err, strlen(err), 0,
-                   (struct sockaddr *)&client_addr, addr_len);
-        } else {
-            // 🔹 Enviar el contenido real
-            sendto(sockfd, contenido, strlen(contenido), 0,
-                   (struct sockaddr *)&client_addr, addr_len);
-            free(contenido); // si get_file malloc() el buffer
-        }
-    }
-
-    close(sockfd);
-    return 0;
-}
-
-
-/*
-int main() {
-    srand(time(NULL));
-    //char dominio[] = "www.vndb.org";
-    //const char *url2= "https://www.vndb.org"; 
-    // crear config si no existe
-    // set_config(dominio, "120mb", "LRU");
-    int sockfd;
-    struct sockaddr_in server_addr, client_addr;
-    char buffer[1024];
-    socklen_t addr_len = sizeof(client_addr);
-
-    // Crear socket UDP
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        perror("Error creando socket");
-        exit(EXIT_FAILURE);
-    }
-
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(9090);
-
-    // Enlazar el socket
-    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Error en bind");
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Servidor UDP escuchando en puerto 9090...\n");
-
-    while (1) {
-        ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer) - 1, 0,
-                               (struct sockaddr *)&client_addr, &addr_len);
-        if (len < 0) {
-            perror("Error en recvfrom");
-            continue;
-        }
-
-        buffer[len] = '\0';
-        printf("Recibido: %s\n", buffer);
-
-        const char *filename = get_filename_from_url(buffer);
-        printf("→ Filename: %s\n", filename);
-
-        sendto(sockfd, filename, strlen(filename), 0,
-               (struct sockaddr *)&client_addr, addr_len);
-    }
-
-    close(sockfd);
-    return 0;
-   
-    
-    const char *file=get_file(dominio,url2);
-    if (!file) {
-        printf("No se pudo leer el archivo.\n");
-        return 1;
-    }else {
-        printf("Archivo encontrado o descargado.\n");
-    }
-    
-    return 0;
-
-
-    //set_config(dominio,"120mb","LRU");
-    //bool valor = is_enough_space(dominio,10);
-    //bool valor = file_exists(dominio,"yui3.jpg");
-    //bool valor = delete_file(dominio,"yui3.jpg");
-   // long tam;
-   // char *nombre ="Prueba3.jpg";
-   // char *contenido = leerArchivo(nombre, &tam);
-   
-    //printf("Tamaño del archivo leído: %ld bytes\n", tam);
-    //bool valor = true;
-    //bool valor = add_file(dominio,nombre,contenido,tam);
-    //if (valor) {
-    //    printf("si\n");
-    //} else{
-    //    printf("no\n");
-    //}
-    //free(contenido);
-
- //cJSON_DeleteItemFromArray(files, i);
-//              return true; // encontrado y eliminado
-
-}*/

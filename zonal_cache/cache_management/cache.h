@@ -11,11 +11,9 @@
 #include "cJSON.h"
 #include <curl/curl.h>
 
-#define MAX_DOMINIO 256
 #define MAX_FILENAME 256
 
 typedef struct {
-    char dominio[MAX_DOMINIO];
     char filename[MAX_FILENAME];
     char *contenido;
     long size;
@@ -25,7 +23,8 @@ typedef struct {
 long convertir_a_bytes(const char *size);
 
 // --- Configuración de cache ---
-bool set_config(const char *dominio, const char *size, const char *type, const char *file_type);
+bool set_config(const char *json_str);
+bool set_subconfig(const char *dominio, const char *subdominio, const char *size, const char *type, char **file_types, int ftsize);
 cJSON *get_config_json(const char *dominio);
 void save_config_json(const char *dominio, cJSON *root);
 bool is_enough_space(const char *dominio, long file_size);
@@ -36,7 +35,9 @@ bool file_exists(const char *dominio, const char *filename);
 bool delete_file(const char *dominio, const char *filename);
 bool save_file(const char *dominio, const char *filename, const char *contenido, long size);
 char *get_file_content(const char *dominio, const char *filename);
-char *get_file(const char *dominio, const char *url);
+char *get_file(const char *dominio, const char *subdominio, const char *url);
+bool compatibility(const char *dominio, const char *filename);
+
 
 // --- Funciones de cache ---
 bool add_file(const char *dominio, const char *filename, const char *contenido, long size);
@@ -56,4 +57,4 @@ ArchivoInfo *get_file_from_url(const char *dominio, const char *url);
 time_t parse_fecha(const char *fecha);
 char* leerArchivo(const char *ruta, long *tam);
 
-#endif // CACHE_H
+#endif 
