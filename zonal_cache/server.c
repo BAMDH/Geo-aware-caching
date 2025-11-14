@@ -162,9 +162,26 @@ void* handle_client(void* arg) {
 
         if (response_api != NULL) {
 
-            ip_service = call_api(&params, "domain/ip");
+            if (strstr(response_api, "true")){
 
-            // Aquí llamarías al servicio backend
+                ip_service = call_api(&params, "domain/ip");
+
+                // Aquí se llama al servicio, web o api
+
+            }
+
+            else{
+
+                snprintf(response, sizeof(response),
+                    "HTTP/1.1 302 Found\r\n"
+                    "Location: %s\r\n"
+                    "Content-Length: 0\r\n"
+                    "Connection: close\r\n"
+                    "\r\n",
+                    url_login_vercel
+                );
+            }
+
 
         } else {
 
