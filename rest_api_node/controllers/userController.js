@@ -71,3 +71,19 @@ export async function login(req, res) {
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
+
+export async function logout(req, res) {
+    try {
+        res.cookie('auth_token', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production' ? 'None' : 'Lax',
+            expires: new Date(0) // Establecer la expiración inmediatamente
+        });
+
+        res.json({ message: "Sesión cerrada exitosamente." });
+    } catch (error) {
+        console.error("Error en logout:", error);
+        res.status(500).json({ error: "Error interno del servidor durante el logout." });
+    }
+}

@@ -1,12 +1,27 @@
 import { useNavigate } from "react-router-dom";
-import { LuCircleUserRound, LuLogOut } from "react-icons/lu";
+import { LuLogOut } from "react-icons/lu";
+import { API_BASE_URL } from "../constants/api";
 
 const Layout = ({ children }) => {
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // TODO
-        navigate("/");
+    const handleLogout = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/logout`, {
+                method: "POST",
+                credentials: "include",
+            });
+
+            if (response.ok) {
+                navigate("/");
+            } else {
+                console.error("Fallo el logout en el servidor.");
+                navigate("/");
+            }
+        } catch (error) {
+            console.error("Error de conexión durante el logout:", error);
+            navigate("/");
+        }
     };
 
     return (
@@ -19,7 +34,6 @@ const Layout = ({ children }) => {
                     Dashboard
                 </h1>
                 <div className="flex items-center gap-6">
-                    <LuCircleUserRound className="w-8 h-8 cursor-pointer hover:scale-110" />
                     <LuLogOut
                         className="w-8 h-8 cursor-pointer hover:scale-110"
                         onClick={handleLogout}
