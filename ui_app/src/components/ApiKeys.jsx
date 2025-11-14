@@ -53,13 +53,27 @@ const ApiKeysContent = ({ apiKeys, domainId, urls, fetchApiKeys, setInfoDialog }
 
     // Handler para eliminar una API Key
     const handleDeleteKey = async () => {
-        const { keyId } = confirmDialog;
+        const apiKeyIdToDelete = confirmDialog.keyId;
+
+        if (!apiKeyIdToDelete) {
+            setConfirmDialog({ ...confirmDialog, open: false });
+            setInfoDialog({ open: true, title: "Error", message: "ID de clave faltante para la eliminación.", type: "error" });
+            return;
+        }
+
         setConfirmDialog({ ...confirmDialog, open: false });
 
         try {
-            const response = await fetch(`${API_BASE_URL}/domains/api-keys/${keyId}`, {
-                method: "DELETE",
+            const payload = {
+                domainId: domainId,
+                apiKeyId: apiKeyIdToDelete,
+            };
+            console.log (payload);
+            const response = await fetch(`${API_BASE_URL}/domains/api-keys/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 credentials: "include",
+                body: JSON.stringify(payload),
             });
 
             const result = await response.json();

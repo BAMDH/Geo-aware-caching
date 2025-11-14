@@ -402,7 +402,8 @@ export async function createApiKey(req, res) {
 
         const newApiKey = generateApiKeyString();
         const newKeyObject = {
-            value: newApiKey,
+            id: crypto.randomBytes(8).toString('hex'),
+            key: newApiKey,
         };
         urlConfig.keys = urlConfig.keys || [];
         urlConfig.keys.push(newKeyObject);
@@ -414,6 +415,7 @@ export async function createApiKey(req, res) {
 
         res.status(201).json({
             message: "API Key generada correctamente. **Guárdela ahora, no se volverá a mostrar**.",
+            id: newKeyObject.id,
             apiKey: newApiKey,
             urlPattern: urlPattern,
         });
@@ -444,7 +446,7 @@ export async function getApiKeys(req, res) {
                         id: key.id,
                         urlPattern: urlConfig.url,
                         // Muestra solo los últimos 4 caracteres del hash para identificación
-                        last4: key.value.slice(-4),
+                        last4: key.key.slice(-4),
                     };
                 });
                 allKeys = allKeys.concat(urlKeys);
@@ -461,19 +463,44 @@ export async function getApiKeys(req, res) {
 // Eliminar una API key
 export async function deleteApiKey(req, res) {
     try {
-        const { apiKeyId } = req.params;
+        const { domainId, apiKeyId } = req.body;
 
-        const keyDocRef = apiKeysRef.doc(apiKeyId);
-        const keyDoc = await keyDocRef.get();
-
-        if (!keyDoc.exists || keyDoc.data().userId !== req.user.id) {
-            return res.status(404).json({ error: "API Key no encontrada o acceso denegado." });
+        if (!domainId || !apiKeyId) {
+            return res.status(400).json({ error: "Faltan parámetros: domainId y apiKeyId son requeridos." });
         }
 
-        await keyDocRef.delete();
-        res.json({ message: "API Key eliminada correctamente" });
+        const domainDocRef = domainsRef.doc(domainId);
+        const domainDoc = await domainDocRef.get();
+
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado o dominio no encontrado." });
+        }
+
+        let currentUrls = domainDoc.data().urls || [];
+        let keyFound = false;
+
+        // Iterar sobre las URLs y sus arrays de keys
+        currentUrls = currentUrls.map(urlConfig => {
+            if (urlConfig.keys && urlConfig.keys.length > 0) {
+                // Filtrar la clave que coincide con el ID
+                const initialLength = urlConfig.keys.length;
+                urlConfig.keys = urlConfig.keys.filter(keyObj => keyObj.id !== apiKeyId);
+                if (urlConfig.keys.length < initialLength) {
+                    keyFound = true;
+                }
+            }
+            return urlConfig;
+        });
+
+        if (!keyFound) {
+            return res.status(404).json({ error: "API Key no encontrada para este dominio." });
+        }
+
+        await domainDocRef.update({ urls: currentUrls });
+
+        res.json({ message: "API Key revocada correctamente." });
     } catch (error) {
-        console.error("Error al eliminar API Key:", error);
+        console.error("Error al eliminar API Key (simple):", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 }
@@ -481,34 +508,35 @@ export async function deleteApiKey(req, res) {
 // Verificar una API Key para acceso al Cache Zonal
 export async function verifyAccessApiKey(req, res) {
     try {
-        const apiKey = req.body.apiKey || req.query.apiKey || req.headers['client-api-key']; 
+        const apiKey = req.headers['client-api-key'];
 
-        if (!apiKey) {
-            return res.status(400).json({ valid: false, message: "Falta la clave de API." });
+        const domain = req.query.domain;
+        const subdomain = req.query.subdomain;
+        if (!apiKey || !domain || !subdomain) {
+            return res.json(false);
         }
 
-        // Buscar la clave en la colección de nivel superior
-        const snapshot = await apiKeysRef
-            .where("apiKey", "==", apiKey)
-            .where("isActive", "==", true)
-            .limit(1)
-            .get();
+        const domainSnap = await domainsRef.where("domain", "==", domain).limit(1).get();
 
-        if (snapshot.empty) {
-            // Clave no encontrada o inactiva: acceso denegado
-            return res.status(401).json({ valid: false, message: "API Key inválida o inactiva." });
+        if (domainSnap.empty) {
+            return res.json(false);
         }
 
-        const keyData = snapshot.docs[0].data();
+        const domainData = domainSnap.docs[0].data();
+        let isValid = false;
 
-        res.json({
-            valid: true,
-            domainId: keyData.domainId,
-            urlId: keyData.urlId,
-            urlPattern: keyData.urlPattern,
-            message: "API Key válida."
+        const urls = domainData.urls || [];
+        urls.some(urlConfig => {
+            const keys = urlConfig.keys || [];
+            const keyFound = keys.find(keyObj => keyObj.key === apiKey);
+            if (keyFound && urlConfig.typeAuth === "api-key") {
+                isValid = true;
+                return true;
+            }
+            return false;
         });
 
+        res.json(isValid);
     } catch (error) {
         console.error("Error en la verificación de API Key para el Cache Zonal:", error);
         res.status(500).json({ valid: false, message: "Error interno del servidor durante la verificación." });

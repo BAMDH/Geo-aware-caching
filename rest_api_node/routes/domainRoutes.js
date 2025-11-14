@@ -26,6 +26,6 @@ router.delete("/:domainId/urls/:urlId", deleteUrl);
 // Rutas de API Keys
 router.post("/:domainId/api-keys", createApiKey);
 router.get('/:domainId/api-keys', getApiKeys);
-router.delete("/api-keys/:apiKeyId", deleteApiKey);
+router.post("/api-keys/delete", deleteApiKey);
 
 export default router;
