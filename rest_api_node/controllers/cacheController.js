@@ -5,49 +5,53 @@ const domainsRef = db.collection("domains");
 
 // Obtener el tipo de autenticación y subdominio
 export async function getTypeAuth(req, res) {
+    let domainData = null;
+    let urlPattern = null;
+    let domainDoc = null;
     try {
-        const { domain } = req.query;
-        if (!domain) return res.status(400).json({ error: "Falta domain" });
+        const { domain: fullUrl } = req.query;
+        if (!fullUrl) {
+            return res.status(400).json({ error: "Falta el dominio." });
+        }
 
-        const snapshot = await domainsRef.where("domain", "==", domain).get();
-        if (snapshot.empty) return res.status(404).json({ error: "Dominio no encontrado" });
+        const COMMON_SUFFIX = "duckdns.org";
+        if (!fullUrl.endsWith(COMMON_SUFFIX)) {
+            const snapshot = await domainsRef.where("domain", "==", fullUrl).get();
+            if (snapshot.empty) {
+                return res.status(404).json({ error: `Dominio '${fullUrl}' no encontrado.` });
+            }
+            domainDoc = snapshot.docs[0];
+            domainData = domainDoc.data();
+            urlPattern = "";
+        } else {
+            const parts = fullUrl.split('.');
+            const domainBaseCandidate = parts.slice(-3).join('.'); // Ej: p02redes.duckdns.org
 
-        const domainData = snapshot.docs[0].data();
+            const snapshot = await domainsRef.where("domain", "==", domainBaseCandidate).get();
+            if (snapshot.empty) {
+                return res.status(404).json({ error: `Dominio '${domainBaseCandidate}' no está registrado.` });
+            }
+            domainDoc = snapshot.docs[0];
+            domainData = domainDoc.data();
+            urlPattern = fullUrl.substring(0, fullUrl.length - domainBaseCandidate.length);
+
+            if (urlPattern.endsWith('.')) {
+                urlPattern = urlPattern.slice(0, -1);
+            }
+        }
 
         if (!domainData.isVerified) {
             return res.status(403).json({ error: "Dominio no verificado. Configuración no disponible." });
         }
 
         const urls = domainData.urls || [];
+        const matchingUrlConfig = urls.find(config => config.url === urlPattern);
 
-        // Simulación: Asumimos que el Zonal Cache necesita la configuración de la primera URL o un resumen.
-        // Como el formato del compañero pide "subdomain" y "type_auth", usaremos la primera URL para el type_auth.
-        const firstUrlConfig = urls.length > 0 ? urls[0] : null;
-
-        let typeAuth = "none";
-        let subdomain = "";
-
-        if (firstUrlConfig) {
-            typeAuth = firstUrlConfig.typeAuth;
-            // Intentar extraer el subdominio de la URL si el patrón lo contiene.
-            // Esto es una simplificación ya que el modelo de URL maneja patrones complejos.
-            const urlMatch = firstUrlConfig.url.match(/^(?:https?:\/\/)?(?:www\.)?([^/]+)/);
-            if (urlMatch) {
-                const parts = urlMatch[1].split('.');
-                if (parts.length > 2) { // Si es api.ejemplo.com, el subdominio es 'api'
-                    subdomain = parts[0];
-                } else if (parts.length === 2 && parts[0] !== 'www') {
-                    // Si el dominio es sub.dominio.com y no es www
-                    subdomain = parts[0];
-                }
-            }
+        if (!matchingUrlConfig) {
+            return res.json({message: `No se encontró configuración específica para el patrón: ${urlPattern}.`});
         }
 
-        res.json({
-            domain: domainData.domain,
-            subdomain: subdomain,
-            type_auth: typeAuth
-        });
+        res.json(matchingUrlConfig.typeAuth);
 
     } catch (error) {
         console.error("Error en getTypeAuthLegacy:", error);
