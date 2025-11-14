@@ -1,7 +1,7 @@
 import socket
 from dnslib import DNSRecord, QTYPE
 
-server = ("127.0.0.1", 31517)
+server = ("127.0.0.1", 32050)
 
 
 def build_estandar(domain: str):

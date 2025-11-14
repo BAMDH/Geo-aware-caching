@@ -80,12 +80,19 @@ unsigned char* build_dns(unsigned char *query, size_t query_len,
     ans_ptr[11] = 0x04;
 
     // RDATA = dirección IP
+
     struct in_addr ip;
-    if (inet_pton(AF_INET, ip_str, &ip) != 1) {
-        printf("[ERROR] IP inválida: %s\n", ip_str);
+    char ip_clean[16];
+
+    // Limpiar espacios y saltos de línea
+    sscanf(ip_str, "%15s", ip_clean);
+
+    if (inet_pton(AF_INET, ip_clean, &ip) != 1) {
+        printf("[ERROR] IP inválida después de limpiar: %s\n", ip_clean);
         free(buffer);
         return NULL;
     }
+
     memcpy(ans_ptr + 12, &ip.s_addr, 4);
 
     unsigned char *ip_bytes = (unsigned char *)&ip.s_addr;

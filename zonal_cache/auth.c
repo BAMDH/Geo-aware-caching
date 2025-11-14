@@ -3,16 +3,17 @@
 
 // Extrae el session_id del header Authorization: Bearer <session_id> o 
 // el api key del header 
-int extract_key_session(const char *buf, size_t len, const char* type, char *out, 
-                            size_t out_size) {
+int extract_key_session(const char *buf, size_t len, const char* type, char *out, size_t out_size) {
 
-    const char *prefix;
+    const char *prefix = NULL;
 
-    if(strcmp(type, "x-api-key") == 0){
+    if (strcmp(type, "x-api-key") == 0) {
         prefix = "x-api-key:";
-    }
-    else {
-        prefix = "Authorization: Bearer ";
+    } else if (strcmp(type, "session_id") == 0) {
+        prefix = "Cookie:";
+    } else {
+        printf("[extract_key_session] Tipo no soportado: %s\n", type);
+        return -1;
     }
 
     size_t prefix_len = strlen(prefix);
@@ -28,24 +29,37 @@ int extract_key_session(const char *buf, size_t len, const char* type, char *out
 
         if (match) {
             size_t pos = i + prefix_len;
-            while (pos < len && buf[pos] == ' ') pos++;  // saltar espacios
+            while (pos < len && (buf[pos] == ' ' || buf[pos] == '\t')) pos++;  // saltar espacios
 
             size_t k = 0;
-            while (pos + k < len && buf[pos + k] != '\r' && buf[pos + k] != '\n' && k < out_size - 1) {
-                out[k] = buf[pos + k];
-                k++;
-            }
-            out[k] = '\0';
 
+            // Caso cookie: buscar "session_id=" dentro del valor
+            if (strcmp(type, "session_id") == 0) {
+                const char *cookie_start = strstr(buf + pos, "session_id=");
+                if (!cookie_start) {
+                    printf("[extract_key_session] No se encontró session_id en la cookie\n");
+                    return -1;
+                }
+                cookie_start += strlen("session_id=");
+                while (cookie_start[k] != ';' && cookie_start[k] != '\r' && cookie_start[k] != '\n' && k < out_size - 1) {
+                    out[k] = cookie_start[k];
+                    k++;
+                }
+            } else { // x-api-key
+                while (pos + k < len && buf[pos + k] != '\r' && buf[pos + k] != '\n' && k < out_size - 1) {
+                    out[k] = buf[pos + k];
+                    k++;
+                }
+            }
+
+            out[k] = '\0';
             printf("[extract_key_session] %s extraído: '%s'\n", type, out);
             fflush(stdout);
-            return 1;  // éxito
+            return 1;
         }
     }
 
     printf("[extract_key_session] No se encontró la cabecera %s\n", type);
     fflush(stdout);
-    return -1; // no encontrado
+    return -1;
 }
-
-
