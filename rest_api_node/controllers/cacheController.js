@@ -1,6 +1,6 @@
 import { db } from "../utils/firebase.js";
 
-import { verifyAccessApiKey } from "./domainController.js";
+import { verifyApiKey, verifyUserPass } from "./domainController.js";
 const domainsRef = db.collection("domains");
 
 // Obtener el tipo de autenticación y subdominio
@@ -83,7 +83,10 @@ export async function getCacheConfig(req, res) {
 }
 
 // Validar API Key
-export const validateApiKey = verifyAccessApiKey;
+export const validateApiKey = verifyApiKey;
+
+// Validar Session Key
+export const validateSessionKey = verifyUserPass;
 
 // Obtener IP de un dominio/subdominio
 export async function getDomainIP(req, res) {
@@ -103,8 +106,8 @@ export async function getDomainIP(req, res) {
         }
 
         // Buscar el objeto del subdominio en el array
-        const subDomainEntry = domainData.subdomains.find(
-            entry => entry.name === subdomain
+        const subDomainEntry = domainData.urls.find(
+            entry => entry.url === subdomain
         );
 
         if (!subDomainEntry || !subDomainEntry.ip) {

@@ -11,3 +11,16 @@ export function generarToken(usuario) {
 export function verificarToken(token) {
     return jwt.verify(token, process.env.JWT_SECRET_KEY);
 }
+
+export function generarTokenUserPass({ userId, domainId, domain, urlPattern }) {
+    return jwt.sign(
+        {
+            userId: userId,
+            domainId: domainId,
+            domain: domain,
+            urlPattern: urlPattern,
+        },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+    );
+};

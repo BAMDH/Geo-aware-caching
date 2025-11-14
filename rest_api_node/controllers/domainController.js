@@ -3,6 +3,7 @@ import { db } from "../utils/firebase.js";
 import crypto from "crypto";
 import dns from "dns";
 import { promisify } from "util"
+import { generarTokenUserPass, verificarToken } from "../utils/jwt.js";
 
 const domainsRef = db.collection("domains");
 const apiKeysRef = db.collection("api_keys");
@@ -501,7 +502,7 @@ export async function deleteApiKey(req, res) {
 }
 
 // Verificar una API Key para acceso al Cache Zonal
-export async function verifyAccessApiKey(req, res) {
+export async function verifyApiKey(req, res) {
     try {
         const apiKey = req.headers['client-api-key'];
 
@@ -637,6 +638,57 @@ export async function getUserPass(req, res) {
     }
 }
 
+// Crear userpass session
+export async function createSession(req, res) {
+    try {
+        const { domain, urlPattern, username, password } = req.body;
+
+        if (!domain || !urlPattern || !username || !password) {
+            return res.status(400).json({ error: "Datos incompletos: domain, urlPattern, username y password son requeridos." });
+        }
+
+        // Se busca el dominio y luego el url para validar el username y password
+        const domainSnap = await domainsRef.where("domain", "==", domain).limit(1).get();
+        if (domainSnap.empty) {
+            return res.status(404).json({ error: "Dominio no encontrado." });
+        }
+
+        const domainData = domainSnap.docs[0].data();
+        const urls = domainData.urls || [];
+
+        const urlConfig = urls.find(item => item.url === urlPattern);
+        if (!urlConfig || urlConfig.typeAuth !== "userpass") {
+            return res.status(400).json({ error: "La URL no requiere o no soporta autenticación User/Pass." });
+        }
+
+        const users = urlConfig.users || [];
+        const userFound = users.find(user => user.username === username);
+        if (!userFound) {
+            return res.status(401).json({ error: "Credenciales inválidas." });
+        }
+        const passwordMatch = await bcrypt.compare(password, userFound.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: "Credenciales inválidas." });
+        }
+
+        const token = generarTokenUserPass({
+            userId: userFound.id,
+            domainId: domainSnap.docs[0].id,
+            domain: domain,
+            urlPattern: urlPattern,
+        });
+
+        res.json({
+            message: "Autenticación exitosa.",
+            token: token
+        });
+
+    } catch (error) {
+        console.error("Error en la autenticación (Login):", error);
+        res.status(500).json({ error: "Error interno del servidor durante el login." });
+    }
+}
+
 // TODO: Editar un userpass
 
 // Eliminar un userpass
@@ -687,7 +739,34 @@ export async function deleteUserPass(req, res) {
     }
 }
 
-// TODO: Verificar una User Pass para acceso al Cache Zonal
+// Verificar una User Pass para acceso al Cache Zonal
 export async function verifyUserPass(req, res) {
+    const sessionToken = req.headers['client-session-id'];
+    const domain = req.query.domain;
+    const urlPattern = req.query.subdomain;
 
+    if (!sessionToken || !domain || !urlPattern) {
+        return res.json(false);
+    }
+
+    try {
+        const decoded = verificarToken(sessionToken);
+        if (decoded.domain !== domain || decoded.urlPattern !== urlPattern) {
+            console.log("Token válido pero para dominio/URL incorrecto.");
+            return res.json(false);
+        }
+
+        res.json(true);
+
+    } catch (error) {
+        // Si jwt.verify falla (Token inválido o expirado)
+        if (error.name === 'TokenExpiredError') {
+            console.log("Token de sesión expirado.");
+        } else if (error.name === 'JsonWebTokenError') {
+            console.log("Token de sesión inválido.");
+        } else {
+            console.error("Error de verificación de sesión:", error);
+        }
+        res.json(false);
+    }
 }
