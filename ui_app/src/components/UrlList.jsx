@@ -21,6 +21,7 @@ const UrlList = ({ urls, handleNavigateToAddUrl, handleEditUrl, handleDeleteUrl 
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patrón de URL</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caché (MB)</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File types</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Política</th>
@@ -33,6 +34,7 @@ const UrlList = ({ urls, handleNavigateToAddUrl, handleEditUrl, handleDeleteUrl 
                             {urls.map((urlConfig, index) => (
                                 <tr key={urlConfig.url || index}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 break-all">{urlConfig.url}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.ip}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.cacheSize}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.fileTypes}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{urlConfig.replacementPolicy}</td>

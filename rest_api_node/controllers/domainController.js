@@ -12,7 +12,7 @@ const resolveTxtPromise = promisify(dns.resolveTxt); // Para usar async/await co
 // 1. Genera el token y guarda el dominio en la db
 export async function addDomain(req, res) {
     try {
-        const { domain, txt, cacheSize, subdomains } = req.body;
+        const { domain, txt, cacheSize } = req.body;
         if (!domain || !txt) return res.status(400).json({ error: "Datos incompletos" });
         if (txt.includes(' ')) {
             return res.status(400).json({ error: "El contenido del record TXT no puede tener espacios en blanco" });
@@ -29,7 +29,6 @@ export async function addDomain(req, res) {
             verificationToken: txt,
             isVerified: false,
             cacheSize: cacheSize || -1,
-            subdomains: subdomains || [],
             urls: [],
         };
 
@@ -127,7 +126,7 @@ export async function getDomainById(req, res) {
 export async function updateDomain(req, res) {
     try {
         const { domainId } = req.params;
-        const { cacheSize, subdomains } = req.body;
+        const { cacheSize } = req.body;
 
         const domainDocRef = domainsRef.doc(domainId);
         const domainDoc = await domainDocRef.get();
@@ -138,7 +137,6 @@ export async function updateDomain(req, res) {
 
         const updateData = {};
         if (cacheSize !== undefined) updateData.cacheSize = parseInt(cacheSize, 10);
-        if (subdomains !== undefined) updateData.subdomains = subdomains;
 
         if (Object.keys(updateData).length === 0) {
             return res.status(200).json({ message: "No se proporcionaron datos para actualizar." });
@@ -170,7 +168,7 @@ export async function deleteDomain(req, res) {
 export async function addUrl(req, res) {
     try {
         const { domainId } = req.params;
-        const { url, cacheSize, fileTypes, ttl, replacementPolicy, typeAuth } = req.body;
+        const { url, ip, cacheSize, fileTypes, ttl, replacementPolicy, typeAuth } = req.body;
 
         const domainDocRef = domainsRef.doc(domainId);
         const domainDoc = await domainDocRef.get();
@@ -210,6 +208,7 @@ export async function addUrl(req, res) {
 
         const newUrlObject = {
             url: url,
+            ip: ip,
             cacheSize: urlCacheSize,
             fileTypes: fileTypes,
             ttl: parseInt(ttl, 10),
@@ -252,7 +251,7 @@ export async function updateUrl(req, res) {
     try {
         const { domainId, url: oldUrlEncoded } = req.params;
         const oldUrl = decodeURIComponent(oldUrlEncoded);
-        const { url: newUrl, cacheSize, fileTypes, ttl, replacementPolicy, typeAuth } = req.body;
+        const { url: newUrl, ip, cacheSize, fileTypes, ttl, replacementPolicy, typeAuth } = req.body;
 
         const domainDocRef = domainsRef.doc(domainId);
         const domainDoc = await domainDocRef.get();
@@ -307,6 +306,7 @@ export async function updateUrl(req, res) {
 
         const updatedUrlData = { ...currentUrlData };
         if (newUrl !== undefined) updatedUrlData.url = newUrl;
+        if (ip !== undefined) updatedUrlData.ip = ip;
         if (cacheSize !== undefined) updatedUrlData.cacheSize = newUrlCacheSize;
         if (fileTypes !== undefined) updatedUrlData.fileTypes = fileTypes;
         if (ttl !== undefined) updatedUrlData.ttl = parseInt(ttl, 10);
@@ -374,7 +374,7 @@ export async function deleteUrl(req, res) {
 // *********************************** API KEYS *********************************** //
 // Generar un token único y seguro para la API Key
 function generateApiKeyString() {
-    return 'sk-' + crypto.randomBytes(24).toString('hex');
+    return crypto.randomBytes(24).toString('hex');
 }
 
 // Crear una nueva API Key para una URL específica
@@ -389,28 +389,30 @@ export async function createApiKey(req, res) {
             return res.status(404).json({ error: "Dominio no encontrado." });
         }
 
-        const domainData = domainDoc.data();
-        let currentUrls = domainData.urls || [];
-        const urlConfig = currentUrls.find(item => item.url === urlPattern);
-        if (!urlConfig || urlConfig.typeAuth !== "api-key") {
-            return res.status(400).json({ error: "Patrón de URL no encontrado o no usa autenticación API Key." });
+        let currentUrls = domainDoc.data().urls || [];
+        const urlIndex = currentUrls.findIndex(item => item.url === urlPattern);
+        if (urlIndex === -1) {
+            return res.status(404).json({ error: "Patrón de URL no encontrado." });
+        }
+
+        const urlConfig = currentUrls[urlIndex];
+        if (urlConfig.typeAuth !== "api-key") {
+            return res.status(400).json({ error: "El patrón de URL no está configurado para usar autenticación API Key." });
         }
 
         const newApiKey = generateApiKeyString();
-
-        const newKeyDoc = {
-            apiKey: newApiKey,
-            userId: req.user.id,
-            domainId: domainId,
-            urlPattern: urlPattern,
-            createdAt: new Date(),
-            isActive: true,
+        const newKeyObject = {
+            value: newApiKey,
         };
+        urlConfig.keys = urlConfig.keys || [];
+        urlConfig.keys.push(newKeyObject);
+        currentUrls[urlIndex] = urlConfig;
 
-        const docRef = await apiKeysRef.add(newKeyDoc);
+        await domainDocRef.update({
+            urls: currentUrls
+        });
 
         res.status(201).json({
-            id: docRef.id,
             message: "API Key generada correctamente. **Guárdela ahora, no se volverá a mostrar**.",
             apiKey: newApiKey,
             urlPattern: urlPattern,
@@ -429,24 +431,27 @@ export async function getApiKeys(req, res) {
         if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
             return res.status(403).json({ error: "Acceso denegado." });
         }
-        // Solo obtener las claves que pertenecen a los recursos de este usuario/dominio
-        const snapshot = await apiKeysRef
-            .where("userId", "==", req.user.id)
-            .where("domainId", "==", domainId)
-            .get();
 
-        const keys = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                urlPattern: data.urlPattern,
-                // Muestra solo los últimos 4 caracteres para identificación
-                last4: data.apiKey.slice(-4),
-                isActive: data.isActive
-            };
+        const domainData = domainDoc.data();
+        const allUrls = domainData.urls || [];
+
+        let allKeys = [];
+
+        allUrls.forEach(urlConfig => {
+            if (urlConfig.typeAuth === "api-key") {
+                const urlKeys = (urlConfig.keys || []).map(key => {
+                    return {
+                        id: key.id,
+                        urlPattern: urlConfig.url,
+                        // Muestra solo los últimos 4 caracteres del hash para identificación
+                        last4: key.value.slice(-4),
+                    };
+                });
+                allKeys = allKeys.concat(urlKeys);
+            }
         });
 
-        res.json(keys);
+        res.json(allKeys);
     } catch (error) {
         console.error("Error al obtener API Keys:", error);
         res.status(500).json({ error: "Error interno del servidor" });
