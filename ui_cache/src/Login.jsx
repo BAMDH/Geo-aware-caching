@@ -55,7 +55,9 @@ const LoginPage = () => {
             });
 
             if (response.ok) {
+                console.log(`El url a redirigir es ${CACHE_REDIRECT_URL}${cacheUrlPattern}.${cacheDomain}`);
                 window.location.replace(`${CACHE_REDIRECT_URL}${cacheUrlPattern}.${cacheDomain}`);
+                
             } else {
                 const result = await response.json();
                 const errorMessage = result.message || result.error || "El inicio de sesión ha fallado.";

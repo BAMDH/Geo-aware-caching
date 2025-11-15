@@ -217,7 +217,51 @@ En la siguiente imagen se observa cómo se realiza la consulta desde el usuario 
 
 ## Zonal Cache
 
+Para comprobar el funcionamiento de la caché, se registró manualmente en el archivo hosts de la PC el dominio obtenido en Firebase, de forma que apuntara a 127.0.0.1:80 (localhost), donde se encuentra ejecutándose la caché.
 
+Para validar el proceso de autenticación del usuario, se realizaron pruebas utilizando dos métodos: API-Key y User/Pass.
+
+Para este proceso se utilizó el dominio p02redes.duckdns.org junto con los subdominios www y test.
+
+- El subdominio www utiliza autenticación mediante api key.  
+- El subdominio test utiliza autenticación por usuario y contraseña (userpass).
+
+
+### API-KEY
+
+Para validar el flujo de autenticación mediante api key, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (www), el cual, a como se mencionó anteriormente, está configurado con autenticación tipo api key.
+
+1. Solicitud sin API-Key
+
+Se utilizó Postman como cliente para realizar la búsqueda del dominio en la caché sin enviar ningún API-Key. La caché respondió correctamente indicando que faltaba la clave.
+
+<div style="text-align: center;"> <img src="images/cache_api_key_1.png" alt="cache_api_key_1" width="65%"> </div>
+
+2. Solicitud con API-Key
+
+Posteriormente, se repitió la solicitud, esta vez enviando un API-Key válido. La respuesta fue satisfactoria, mostrando el mensaje “funciona” como prueba de correcto funcionamiento.
+
+<div style="text-align: center;"> <img src="images/cache_api_key_2.png" alt="cache_api_key_2" width="65%"> </div>
+
+### USERPASS
+
+Para validar el flujo de autenticación mediante usuario y contraseña, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (test), el cual, a como se mencionó anteriormente, está configurado con autenticación tipo userpass.
+
+1. Sin session_id
+
+En las siguientes imágenes se observa cómo, al no contar con un session_id, el usuario es redirigido correctamente al login alojado en Vercel, tanto al realizar la prueba desde Postman como visualmente desde el navegador.
+
+
+<div style="text-align: center;">
+    <img src="images/cache_sessionid_1.png" alt="nslookup" width="65%">
+</div>
+
+
+<div style="text-align: center;">
+    <img src="images/cache_sessionid_2.png" alt="nslookup" width="65%">
+</div>
+
+2. Con session id
 
 
 
