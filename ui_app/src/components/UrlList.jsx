@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuPlus } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuPencil } from "react-icons/lu";
 
 const UrlList = ({ urls, handleNavigateToAddUrl, handleEditUrl, handleDeleteUrl }) => {
     return (
@@ -46,10 +46,10 @@ const UrlList = ({ urls, handleNavigateToAddUrl, handleEditUrl, handleDeleteUrl 
                                     </td>
                                     <td className="px-6 py- whitespace-nowrap text-sm font-medium">
                                         <button onClick={() => handleEditUrl(urlConfig)} className="text-indigo-600 hover:text-indigo-900 mr-3">
-                                            Editar
+                                            <LuPencil className="w-5 h-5" />
                                         </button>
                                         <button onClick={() => handleDeleteUrl(urlConfig.url)} className="text-red-600 hover:text-red-900">
-                                            Eliminar
+                                            <LuTrash2 className="w-5 h-5" />
                                         </button>
                                     </td>
                                 </tr>

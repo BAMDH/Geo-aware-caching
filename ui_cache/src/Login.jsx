@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import Dialog from "./Dialog";
 import CustomForm from "./Form"
-import { API_BASE_URL } from "../../ui_app/src/constants/api"
 
 const LOGIN_ACCESS_ENDPOINT = "/domain/auth";
 const CACHE_REDIRECT_URL = "http://localhost:80";
@@ -10,7 +9,6 @@ const CACHE_REDIRECT_URL = "http://localhost:80";
 const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: ""});
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const cacheDomain = searchParams.get('domain');
     const cacheUrlPattern = searchParams.get('subdomain');
@@ -30,19 +28,23 @@ const LoginPage = () => {
         setIsLoading(true)
         const isCacheLogin = cacheDomain && cacheUrlPattern;
 
-        let endpoint = isCacheLogin ? LOGIN_ACCESS_ENDPOINT : `${API_BASE_URL}/users/login`;
-        let payload = {};
-
-        if (isCacheLogin) {
-            payload = {
-                domain: cacheDomain,
-                urlPattern: cacheUrlPattern,
-                username: data.user,
-                password: data.password
-            };
-        } else {
-            payload = { user: data.user, password: data.password };
+        if (!isCacheLogin) {
+            setIsLoading(false);
+            setInfoDialog({
+                open: true,
+                title: "Error de Configuración",
+                message: "Faltan los parámetros 'domain' o 'subdomain' en la URL. No se puede realizar el Login de Acceso."
+            });
+            return;
         }
+
+        const endpoint = LOGIN_ACCESS_ENDPOINT;
+        const payload = {
+            domain: cacheDomain,
+            urlPattern: cacheUrlPattern,
+            username: data.user,
+            password: data.password
+        };
 
         try {
             const response = await fetch(endpoint, {
@@ -53,9 +55,7 @@ const LoginPage = () => {
             });
 
             if (response.ok) {
-                if (isCacheLogin) {
-                    window.location.replace(`${CACHE_REDIRECT_URL}?domain=${cacheDomain}&subdomain=${cacheUrlPattern}`);
-                }
+                window.location.replace(`${CACHE_REDIRECT_URL}?domain=${cacheDomain}&subdomain=${cacheUrlPattern}`);
             } else {
                 const result = await response.json();
                 const errorMessage = result.message || result.error || "El inicio de sesión ha fallado.";
