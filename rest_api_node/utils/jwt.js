@@ -20,7 +20,7 @@ export function generarTokenUserPass({ userId, domainId, domain, urlPattern }) {
             domain: domain,
             urlPattern: urlPattern,
         },
-        JWT_SECRET,
+        process.env.JWT_SECRET_KEY,
         { expiresIn: '1h' }
     );
 };
