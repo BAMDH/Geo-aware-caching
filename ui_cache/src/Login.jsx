@@ -1,46 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Dialog from "./Dialog";
 import CustomForm from "./Form"
 import { API_BASE_URL } from "../../ui_app/src/constants/api"
 
+const LOGIN_ACCESS_ENDPOINT = "/domain/auth";
+const CACHE_REDIRECT_URL = "http://localhost:80";
+
 const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [infoDialog, setInfoDialog] = useState({ open: false, title: "", message: ""});
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const cacheDomain = searchParams.get('domain');
+    const cacheUrlPattern = searchParams.get('subdomain');
+
+    useEffect(() => {
+        if (!cacheDomain || !cacheUrlPattern) {
+            console.log("No se encontraron parámetros de caché en la URL.");
+        }
+    }, [cacheDomain, cacheUrlPattern]);
 
     const loginFields = [
-        {
-            name: "user",
-            label: "Usuario",
-            type: "text",
-            placeholder: "Ingrese su nombre de usuario",
-            required: true,
-        },
-        {
-            name: "password",
-            label: "Contraseña",
-            type: "password",
-            placeholder: "Ingrese su contraseña",
-            required: true,
-        },
+        { name: "user", label: "Usuario", type: "text", placeholder: "Ingrese su nombre de usuario", required: true, },
+        { name: "password", label: "Contraseña", type: "password", placeholder: "Ingrese su contraseña", required: true, },
     ]
 
     const handleLogin = async (data) => {
         setIsLoading(true)
+        const isCacheLogin = cacheDomain && cacheUrlPattern;
+
+        let endpoint = isCacheLogin ? LOGIN_ACCESS_ENDPOINT : `${API_BASE_URL}/users/login`;
+        let payload = {};
+
+        if (isCacheLogin) {
+            payload = {
+                domain: cacheDomain,
+                urlPattern: cacheUrlPattern,
+                username: data.user,
+                password: data.password
+            };
+        } else {
+            payload = { user: data.user, password: data.password };
+        }
+
         try {
-            const response = await fetch(`${API_BASE_URL}/users/login`, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    user: data.user,
-                    password: data.password
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
-                window.location.replace("http://localhost:80");
+                if (isCacheLogin) {
+                    window.location.replace(`${CACHE_REDIRECT_URL}?domain=${cacheDomain}&subdomain=${cacheUrlPattern}`);
+                }
             } else {
                 const result = await response.json();
                 const errorMessage = result.message || result.error || "El inicio de sesión ha fallado.";

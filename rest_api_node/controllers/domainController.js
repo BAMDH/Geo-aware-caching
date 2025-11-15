@@ -678,10 +678,7 @@ export async function createSession(req, res) {
             urlPattern: urlPattern,
         });
 
-        res.json({
-            message: "Autenticación exitosa.",
-            token: token
-        });
+        res.json(token);
 
     } catch (error) {
         console.error("Error en la autenticación (Login):", error);

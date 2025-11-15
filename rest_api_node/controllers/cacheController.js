@@ -1,6 +1,6 @@
 import { db } from "../utils/firebase.js";
 
-import { verifyApiKey, verifyUserPass } from "./domainController.js";
+import { verifyApiKey, createSession, verifyUserPass } from "./domainController.js";
 const domainsRef = db.collection("domains");
 
 // Obtener el tipo de autenticación y subdominio
@@ -92,6 +92,9 @@ export async function getCacheConfig(req, res) {
 
 // Validar API Key
 export const validateApiKey = verifyApiKey;
+
+// Crear Session Key
+export const generateSessionKey = createSession;
 
 // Validar Session Key
 export const validateSessionKey = verifyUserPass;
