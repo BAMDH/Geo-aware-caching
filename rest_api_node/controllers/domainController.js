@@ -685,7 +685,16 @@ export async function createSession(req, res) {
             urlPattern: urlPattern,
         });
 
-        res.json(token);
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+        res.cookie('session_id', token, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'None' : 'Lax',
+            maxAge: 3600000 // 1 hora de validez
+        });
+
+        res.json({ message: "Sesión establecida correctamente." });
 
     } catch (error) {
         console.error("Error en la autenticación (Login):", error);
@@ -693,7 +702,7 @@ export async function createSession(req, res) {
     }
 }
 
-// TODO: Editar un userpass
+// Editar un userpass
 export async function updateUserPass(req, res) {
     try {
         const { domainId } = req.params;
