@@ -251,7 +251,7 @@ export async function getUrls(req, res) {
 // Actualizar URL
 export async function updateUrl(req, res) {
     try {
-        const { domainId, url: oldUrlEncoded } = req.params;
+        const { domainId, urlId: oldUrlEncoded } = req.params;
         const oldUrl = decodeURIComponent(oldUrlEncoded);
         const { url: newUrl, ip, cacheSize, fileTypes, ttl, replacementPolicy, typeAuth } = req.body;
 
@@ -265,7 +265,6 @@ export async function updateUrl(req, res) {
         let currentUrls = domainData.urls || [];
 
         const urlIndex = currentUrls.findIndex(item => item.url === oldUrl);
-
         if (urlIndex === -1) {
             return res.status(404).json({ error: "URL no encontrada." });
         }
@@ -273,11 +272,15 @@ export async function updateUrl(req, res) {
         const currentUrlData = currentUrls[urlIndex];
         const domainCacheLimit = domainData.cacheSize || -1;
 
+        let generalDataChanged = false;
+        let cacheSizeChanged = false;
+
         if (newUrl !== undefined && newUrl !== oldUrl) {
             const existingUrl = currentUrls.find(item => item.url === newUrl);
             if (existingUrl) {
                 return res.status(400).json({ error: `El nuevo patrón de URL "${newUrl}" ya está registrado en este dominio.` });
             }
+            generalDataChanged = true;
         }
 
         // Se valida que no se este excediendo el tamanno de caché del dominio
@@ -304,18 +307,22 @@ export async function updateUrl(req, res) {
                     error: `La nueva caché total asignada (${newCacheTotal} MB) excede el límite del dominio (${domainCacheLimit} MB).`
                 });
             }
+            cacheSizeChanged = true;
         }
 
         const updatedUrlData = { ...currentUrlData };
         if (newUrl !== undefined) updatedUrlData.url = newUrl;
-        if (ip !== undefined) updatedUrlData.ip = ip;
-        if (cacheSize !== undefined) updatedUrlData.cacheSize = newUrlCacheSize;
-        if (fileTypes !== undefined) updatedUrlData.fileTypes = fileTypes;
-        if (ttl !== undefined) updatedUrlData.ttl = parseInt(ttl, 10);
-        if (replacementPolicy !== undefined) updatedUrlData.replacementPolicy = replacementPolicy;
-        if (typeAuth !== undefined) updatedUrlData.typeAuth = typeAuth;
+        if (ip !== undefined && ip !== currentUrlData.ip) { updatedUrlData.ip = ip; generalDataChanged = true; }
+        if (fileTypes !== undefined && fileTypes !== currentUrlData.fileTypes) { updatedUrlData.fileTypes = fileTypes; generalDataChanged = true; }
+        if (ttl !== undefined && parseInt(ttl, 10) !== currentUrlData.ttl) { updatedUrlData.ttl = parseInt(ttl, 10); generalDataChanged = true; }
+        if (replacementPolicy !== undefined && replacementPolicy !== currentUrlData.replacementPolicy) { updatedUrlData.replacementPolicy = replacementPolicy; generalDataChanged = true; }
+        if (typeAuth !== undefined && typeAuth !== currentUrlData.typeAuth) { updatedUrlData.typeAuth = typeAuth; generalDataChanged = true; }
 
-        if (Object.keys(updatedUrlData).length === Object.keys(currentUrlData).length && newUrlCacheSize === currentUrlData.cacheSize && newUrl === oldUrl) {
+        if (cacheSizeChanged) {
+            updatedUrlData.cacheSize = newUrlCacheSize;
+        }
+
+        if (!generalDataChanged && !cacheSizeChanged && newUrl === undefined) {
             return res.status(200).json({ message: "No se proporcionaron datos para actualizar." });
         }
 

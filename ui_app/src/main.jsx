@@ -6,6 +6,7 @@ import RegisterPage from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AddDomainPage from './pages/domains/AddDomain.jsx'
 import AddURLPage from './pages/urls/AddURL.jsx'
+import EditURLPage from './pages/urls/EditURL.jsx'
 import DomainPage from './pages/domains/Domain.jsx'
 import './index.css'
 
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/domainAdd", element: <AddDomainPage /> },
   { path: "/urlAdd", element: <AddURLPage /> },
+  { path: "/urlEdit", element: <EditURLPage /> },
   { path: "/domain", element: <DomainPage /> },
 ]);
 

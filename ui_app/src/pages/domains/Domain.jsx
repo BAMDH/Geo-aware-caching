@@ -145,7 +145,7 @@ const DomainPage = () => {
     // TODO Handler para editar una URL
     const handleEditUrl = (urlObject) => {
         // TODO
-        navigate(`/urlEdit/${domainId}`, {
+        navigate(`/urlEdit`, {
             state: {
                 domainId: domainId,
                 domainName: domainName || domainInfo?.domain,
