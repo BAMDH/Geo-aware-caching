@@ -197,23 +197,23 @@ Para verificar el correcto funcionamiento del DNS Interceptor, se utilizó `nslo
 En Firebase se encuentran registradas dos cachés zonales, ubicadas en Costa Rica y Brasil, como se muestra en las siguientes imágenes:
 
 <div style="text-align: center;">
-    <img src="images/cache_1.png" alt="Cache_1" width="85%">
+    <img src="images/cache_1.png" alt="Cache_1" width="65%">
 </div>
 
 <div style="text-align: center;">
-    <img src="images/cache_2.png" alt="Cache_2" width="85%">
+    <img src="images/cache_2.png" alt="Cache_2" width="65%">
 </div>
 
 A continuación, se muestra la ubicación de la IP del usuario, que corresponde a Costa Rica:
 
 <div style="text-align: center;">
-    <img src="images/user_ip.png" alt="user_ip" width="85%">
+    <img src="images/user_ip.png" alt="user_ip" width="65%">
 </div>
 
 En la siguiente imagen se observa cómo se realiza la consulta desde el usuario y el DNS Interceptor retorna la IP `10.1.3.207`, correspondiente a la caché zonal más cercana en Costa Rica, funcionando correctamente:
 
 <div style="text-align: center;">
-    <img src="images/nslookup.png" alt="nslookup" width="85%">
+    <img src="images/nslookup.png" alt="nslookup" width="65%">
 </div>
 
 
@@ -254,16 +254,17 @@ Para validar el flujo de autenticación mediante usuario y contraseña, se reali
 En las siguientes imágenes se observa cómo, al no contar con un session_id, el usuario es redirigido correctamente al login alojado en Vercel, tanto al realizar la prueba desde Postman como visualmente desde el navegador.
 
 
-<div style="text-align: center;">
-    <img src="images/cache_sessionid_1.png" alt="nslookup" width="85%">
-</div>
+| Postman | Navegador |
+|--------|-----------|
+| <div style="text-align: center;"><img src="images/cache_sessionid_1.png" alt="nslookup" width="100%"></div> | <div style="text-align: center;"><img src="images/cache_sessionid_2.png" alt="nslookup" width="100%"></div> |
 
-
-<div style="text-align: center;">
-    <img src="images/cache_sessionid_2.png" alt="nslookup" width="85%">
-</div>
 
 2. Con session id
+
+En este caso, la prueba se realizó utilizando la dirección IP del servidor Apache. En la siguiente imagen se observa que el sistema responde correctamente cuando el usuario envía un session_id válido.
+
+
+<div style="text-align: center;"> <img src="images/apache_image.png" alt="apache_server" width="100%"> </div>
 
 
 ## UI

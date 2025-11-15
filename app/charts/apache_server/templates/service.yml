@@ -12,4 +12,4 @@ spec:
     - protocol: {{ .Values.service.protocol }}
       port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.port }}
-      nodePort: 32339
+      nodePort: {{ .Values.service.nodePort }}

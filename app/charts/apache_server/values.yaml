@@ -6,3 +6,4 @@ service:
   protocol: TCP
   type: NodePort
   port: 80
+  nodePort: 32339
