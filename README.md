@@ -279,6 +279,39 @@ En este caso, la prueba se realizó utilizando la dirección IP del servidor Apa
 <div style="text-align: center;"> <img src="images/apache_image.png" alt="apache_server" width="100%"> </div>
 
 
+### Algoritmos de remplazo
+1. MRU: para probar este algoritmo se busco la pagina www.vndb.org(index),v2002 y v10, se volvió a buscar v2002 para que quede como la pagina más reciente. Los archivos guardan [nombre,tamaño,fecha/uso]. Entonces antes del remplazo la cache se ve así:
+![MRU](images/MRUbefore.png)
+Luego se buscó v20424, la cual remplazó a la buscaba más reciente porque no habia más espacio en la cache.
+![MRU](images/MRUafter.png)
+
+2. LRU: mismo patrón de busqueda que el anterior.
+![LRU](images/LRUbefore.png)
+Luego se buscó v20424, la cual remplazó a las dos busquedas mas antiguas, ya que tenia espacio al eliminar la primera mas antigua.
+![LRU](images/LRUafter.png)
+
+3. FIFO: esta vez el orden de busqueda es v20424, v10, index.
+![FIFO](images/FIFObefore.png)
+Luego se buscó v2002, lo cual remplazo el primer elemento buscado.
+![FIFO](images/FIFOafter.png)
+
+4. LFU: orden de busqueda es v20424, v10, index, pero se realiza 3,2,1 vez respectivamente la busqueda.
+![LFU](images/LFUbefore.png)
+Luego se buscó v2002, lo cual remplazo los dos archivos menos consultados para poder ser almacenado.
+![LFU](images/LFUafter.png)
+
+5. Random: orden de busqueda es v20424 y v2002.
+![Random](images/Randombefore.png)
+Luego se buscó v10, lo cual remplazo aleatoriamente uno de los dos archivos.
+![Random](images/Randomafter.png)
+
+6. Prueba de tipo: va a consultar por el indice de apache, para esta prueba la configuracion no acepta guardar html en cache. Se hizo esta petición y se recibió lo siguiente:
+![Prueba tipo](images/pruebatipo.png)
+Como se puede observar se obtuvo lo pedido, a continuación se mostrará que no se guardó en la cache:
+![Prueba tipo](images/tipopruebab.png)
+
+
+
 ## UI
 Al correr la interfaz se muestra el login, si el usuario no está registrado ahí se muestra una opción donde puede registrarse.
 | Login | Registro | Registro exitoso |
