@@ -4,7 +4,7 @@ import {
     getDomains, getDomainById, addDomain, verifyDomain, updateDomain, deleteDomain,
     addUrl, getUrls, updateUrl, deleteUrl,
     createApiKey, getApiKeys, deleteApiKey,
-    createUserPass, getUserPass, deleteUserPass
+    createUserPass, getUserPass, updateUserPass, deleteUserPass
 } from "../controllers/domainController.js";
 const router = express.Router();
 
@@ -32,6 +32,7 @@ router.post("/api-keys/delete", deleteApiKey);
 // Rutas de User Pass
 router.post("/:domainId/userpass", createUserPass);
 router.get('/:domainId/userpass', getUserPass);
+router.put("/:domainId/userpass", updateUserPass);
 router.delete("/:domainId/userpass", deleteUserPass);
 
 

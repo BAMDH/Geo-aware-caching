@@ -8,9 +8,20 @@ const UserPassContent = ({ urls, domainId, users, fetchUsers, setInfoDialog }) =
     const userPassAuthUrls = urls.filter(url => url.typeAuth === 'userpass');
     const [selectedUrlPattern, setSelectedUrlPattern] = useState(userPassAuthUrls[0]?.url || '');
     const filteredUsers = users.filter(user => user.urlPattern === selectedUrlPattern);
+
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+
     const [confirmDialog, setConfirmDialog] = useState({ open: false, userId: null, pattern: "", username: "" });
+
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [userToEdit, setUserToEdit] = useState(null);
+
+    const handleOpenEditDialog = (user) => {
+        setUserToEdit(user);
+        setIsEditDialogOpen(true);
+    };
 
     const userPassFields = [
         { name: "username", label: "Usuario", type: "text", required: true, placeholder: "Ingrese un nombre de usuario" },
@@ -89,7 +100,54 @@ const UserPassContent = ({ urls, domainId, users, fetchUsers, setInfoDialog }) =
         }
     }
 
-    // TODO: handler para editar user/pass
+    // Handler para editar user/pass
+    const handleEditUser = async (formData) => {
+        if (!userToEdit) return;
+        setIsEditing(true);
+
+        try {
+            const newPassword = formData.password;
+            // Validar si realmente hay cambios
+            if (formData.username === userToEdit.username && !newPassword) {
+                setInfoDialog({ open: true, title: "Aviso", message: "No se detectaron cambios.", type: "info" });
+                setIsEditing(false);
+                return;
+            }
+
+            const payload = {
+                userId: userToEdit.id,
+                urlPattern: userToEdit.urlPattern,
+                newUsername: formData.username,
+                newPassword: newPassword || null,
+            };
+
+            const response = await fetch(`${API_BASE_URL}/domains/${domainId}/userpass`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setInfoDialog({ open: true, title: "Éxito", message: result.message, type: "info" });
+                await fetchUsers();
+                setIsEditDialogOpen(false);
+            } else {
+                setInfoDialog({ open: true, title: "Error", message: result.error || "Error al actualizar el usuario.", type: "error" });
+            }
+        } catch (error) {
+            setInfoDialog({ open: true, title: "Error", message: `Error de conexión: ${error.message}`, type: "error" });
+        } finally {
+            setIsEditing(false);
+        }
+    };
+
+    const userEditFields = userToEdit ? [
+        { name: "username", label: "Nuevo Usuario", type: "text", required: true, initialValue: userToEdit.username },
+        { name: "password", label: "Nueva Contraseña (Opcional)", type: "password", required: false, placeholder: "Dejar vacío para no cambiar" },
+    ] : [];
 
     return (
         <div>
@@ -138,7 +196,7 @@ const UserPassContent = ({ urls, domainId, users, fetchUsers, setInfoDialog }) =
                             </div>
                             <div>
                                 <button
-                                    onClick={() => { /* TODO: Implementar Edit */ }}
+                                    onClick={() => handleOpenEditDialog(user)}
                                     className="text-indigo-600 hover:text-indigo-800 transition-colors p-1 mr-3">
                                     <LuPencil className="w-5 h-5" />
                                 </button>
@@ -170,6 +228,26 @@ const UserPassContent = ({ urls, domainId, users, fetchUsers, setInfoDialog }) =
                     isLoading={isCreating}
                 />
             </Dialog>
+
+            {/* Diálogo de Edición de Usuario */}
+            {userToEdit && (
+                <Dialog
+                    type="form"
+                    open={isEditDialogOpen}
+                    onOpenChange={setIsEditDialogOpen}
+                    title={`Editar Usuario: ${userToEdit.username}`}
+                    isLoading={isEditing}
+                    cancelLabel="Cancelar"
+                >
+                    <CustomForm
+                        theme="light"
+                        fields={userEditFields}
+                        onSubmit={handleEditUser}
+                        submitLabel="Guardar Cambios"
+                        isLoading={isEditing}
+                    />
+                </Dialog>
+            )}
 
             {/* Diálogo de Confirmación de Eliminación */}
             <Dialog

@@ -687,6 +687,68 @@ export async function createSession(req, res) {
 }
 
 // TODO: Editar un userpass
+export async function updateUserPass(req, res) {
+    try {
+        const { domainId } = req.params;
+        const { userId, urlPattern, newUsername, newPassword } = req.body; 
+
+        if (!domainId || !userId || !urlPattern) {
+            return res.status(400).json({ error: "Datos incompletos: domainId, userId y urlPattern son requeridos." });
+        }
+
+        const domainDocRef = domainsRef.doc(domainId);
+        const domainDoc = await domainDocRef.get();
+
+        if (!domainDoc.exists || domainDoc.data().userId !== req.user.id) {
+            return res.status(403).json({ error: "Acceso denegado o dominio no encontrado." });
+        }
+
+        let currentUrls = domainDoc.data().urls || [];
+        const urlIndex = currentUrls.findIndex(item => item.url === urlPattern);
+
+        if (urlIndex === -1 || currentUrls[urlIndex].typeAuth !== "userpass") {
+            return res.status(404).json({ error: "Patrón de URL no encontrado o no usa autenticación User/Pass." });
+        }
+
+        const urlConfig = currentUrls[urlIndex];
+        const userIndex = urlConfig.users.findIndex(user => user.id === userId);
+
+        if (userIndex === -1) {
+            return res.status(404).json({ error: "Usuario no encontrado para esta URL." });
+        }
+
+        let userToUpdate = { ...urlConfig.users[userIndex] };
+        let changesMade = false;
+
+        if (newUsername && newUsername !== userToUpdate.username) {
+            if (urlConfig.users.some((user, index) => user.username === newUsername && index !== userIndex)) {
+                return res.status(400).json({ error: `El nombre de usuario '${newUsername}' ya está en uso.` });
+            }
+            userToUpdate.username = newUsername;
+            changesMade = true;
+        }
+
+        if (newPassword) {
+            userToUpdate.password = await bcrypt.hash(newPassword, 10);
+            changesMade = true;
+        }
+
+        if (!changesMade) {
+            return res.status(200).json({ message: "No se proporcionaron datos para actualizar." });
+        }
+
+        urlConfig.users[userIndex] = userToUpdate;
+        currentUrls[urlIndex] = urlConfig;
+
+        await domainDocRef.update({ urls: currentUrls });
+
+        res.status(200).json({ message: `Usuario '${userToUpdate.username}' actualizado correctamente.` });
+
+    } catch (error) {
+        console.error("Error al actualizar User/Pass:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+}
 
 // Eliminar un userpass
 export async function deleteUserPass(req, res) {
