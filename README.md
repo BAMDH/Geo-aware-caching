@@ -188,6 +188,18 @@ Para cada dominio registrado, permite:
 - Destrucción del token o sesión activa.
 
 
+## IA generativa utilizada
+Para el desarrollo de la UI el equipo se apoyó en v0 de Vercel. Esta es una herramienta de IA generativa bastante reconocida que facilita la creación de código frontend (principalmente React y Tailwind CSS) a partir de prompts descriptivos, permitiendo previsualizar el resultado de forma inmediata. La selección de v0 se basó en su popularidad e integración con el stack del proyecto.
+
+Parte de los props que se le enviaron fueron:
+| Prop | Props | Prop |
+|----------|-----------|-----------|
+| ![](./images/v01.png)  | ![](./images/v02.png) | ![](./images/v03.png) |
+
+Opinión:
+Notamos que trabaja mejor con props en inglés y props que incluyan un ejemplo de código, así el código que genera sigue la forma de programación que uno le da y no es tan ineficiente. En este caso se reusaron varios componentes que ya se tenían por lo que facilitó mucho el trabajo dándole archivos en los que se pudiera basar. Si es importante antes de pedirle algo ya tener una idea de lo que uno necesita exactamente y luego de eso uno analizar qué partes de códigos o archivos se pueden simplificar, porque la herramienta si tiene mucho esa falla de no reutilizar tanto, pero además de eso con lo que fueron colores y el uso de Tailwind lo entendió bastante bien y facilitó mucho el trabajo porque hubieron muchos componentes y páginas que se parecían por lo que se podían reutilizar.
+
+
 # Pruebas Funcionales
 
 ## DNS Interceptor
@@ -362,3 +374,6 @@ Toda esta información se guarda en firebase con el siguiente formato:
 
 8. La verificación de dominio vía Duck DNS debería ser un proceso asíncrono y no bloquear la UI.
 
+9. Se recomienda investigar una herramienta de IA generativa antes de usarla, en este caso el uso de v0 facilitó mucho el trabajo por ir tan alineada a las tecnologías que se estaban usando.
+
+10. Se recomienda mantener la estructura modular de la interfaz, incluyendo la clara división en componentes y páginas, ya que esto facilita la comprensión precisa de la responsabilidad de cada segmento del código y mejora significativamente la mantenibilidad del frontend.
