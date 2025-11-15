@@ -195,23 +195,23 @@ Para verificar el correcto funcionamiento del DNS Interceptor, se utilizó `nslo
 En Firebase se encuentran registradas dos cachés zonales, ubicadas en Costa Rica y Brasil, como se muestra en las siguientes imágenes:
 
 <div style="text-align: center;">
-    <img src="images/cache_1.png" alt="Cache_1" width="65%">
+    <img src="images/cache_1.png" alt="Cache_1" width="85%">
 </div>
 
 <div style="text-align: center;">
-    <img src="images/cache_2.png" alt="Cache_2" width="65%">
+    <img src="images/cache_2.png" alt="Cache_2" width="85%">
 </div>
 
 A continuación, se muestra la ubicación de la IP del usuario, que corresponde a Costa Rica:
 
 <div style="text-align: center;">
-    <img src="images/user_ip.png" alt="user_ip" width="65%">
+    <img src="images/user_ip.png" alt="user_ip" width="85%">
 </div>
 
 En la siguiente imagen se observa cómo se realiza la consulta desde el usuario y el DNS Interceptor retorna la IP `10.1.3.207`, correspondiente a la caché zonal más cercana en Costa Rica, funcionando correctamente:
 
 <div style="text-align: center;">
-    <img src="images/nslookup.png" alt="nslookup" width="65%">
+    <img src="images/nslookup.png" alt="nslookup" width="85%">
 </div>
 
 
@@ -229,23 +229,23 @@ Para este proceso se utilizó el dominio p02redes.duckdns.org junto con los subd
 
 ### API-KEY
 
-Para validar el flujo de autenticación mediante api key, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (www), el cual, a como se mencionó anteriormente, está configurado con autenticación tipo api key.
+Para validar el flujo de autenticación mediante api key, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (www), el cual, como se mencionó anteriormente, está configurado con autenticación tipo api key.
 
 1. Solicitud sin API-Key
 
 Se utilizó Postman como cliente para realizar la búsqueda del dominio en la caché sin enviar ningún API-Key. La caché respondió correctamente indicando que faltaba la clave.
 
-<div style="text-align: center;"> <img src="images/cache_api_key_1.png" alt="cache_api_key_1" width="65%"> </div>
+<div style="text-align: center;"> <img src="images/cache_api_key_1.png" alt="cache_api_key_1" width="100%"> </div>
 
 2. Solicitud con API-Key
 
 Posteriormente, se repitió la solicitud, esta vez enviando un API-Key válido. La respuesta fue satisfactoria, mostrando el mensaje “funciona” como prueba de correcto funcionamiento.
 
-<div style="text-align: center;"> <img src="images/cache_api_key_2.png" alt="cache_api_key_2" width="65%"> </div>
+<div style="text-align: center;"> <img src="images/cache_api_key_2.png" alt="cache_api_key_2" width="100%"> </div>
 
 ### USERPASS
 
-Para validar el flujo de autenticación mediante usuario y contraseña, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (test), el cual, a como se mencionó anteriormente, está configurado con autenticación tipo userpass.
+Para validar el flujo de autenticación mediante usuario y contraseña, se realizó la búsqueda del dominio correspondiente desde el navegador, utilizando el subdominio de pruebas (test), el cual, como se mencionó anteriormente, está configurado con autenticación tipo userpass.
 
 1. Sin session_id
 
@@ -253,12 +253,12 @@ En las siguientes imágenes se observa cómo, al no contar con un session_id, el
 
 
 <div style="text-align: center;">
-    <img src="images/cache_sessionid_1.png" alt="nslookup" width="65%">
+    <img src="images/cache_sessionid_1.png" alt="nslookup" width="85%">
 </div>
 
 
 <div style="text-align: center;">
-    <img src="images/cache_sessionid_2.png" alt="nslookup" width="65%">
+    <img src="images/cache_sessionid_2.png" alt="nslookup" width="85%">
 </div>
 
 2. Con session id
@@ -268,6 +268,28 @@ En las siguientes imágenes se observa cómo, al no contar con un session_id, el
 
 # Conclusiones
 
+1. El DNS Interceptor selecciona correctamente la caché zonal más cercana al usuario, lo cual reduce la latencia y cumple con el objetivo de distribución geográfica del sistema.
+
+2. La integración entre el DNS Interceptor, la API y Firebase funciona adecuadamente, ya que la ubicación del usuario es correctamente comparada con las cachés registradas para determinar el destino óptimo.
+
+3. La caché procesa correctamente las solicitudes HTTP, detectando el dominio, consultando su configuración en la API y aplicando el tipo de autenticación asignado para cada subdominio.
+
+4. La caché procesa correctamente las solicitudes protegidas mediante autenticación por API-Key, validando la presencia y validez de la clave antes de permitir el acceso al recurso solicitado.
+
+5. La caché gestiona adecuadamente las solicitudes que requieren autenticación por usuario y contraseña, identificando la ausencia o invalidez del session_id y redirigiendo al usuario al formulario de login, así como validando sesiones activas para permitir el acceso.
+
+6. La caché respeta las reglas de almacenamiento definidas en Firebase, aplicando TTL, políticas de reemplazo y almacenamiento en disco según lo esperado.
+
+7. La Zonal Cache implementa correctamente los algoritmos de reemplazo configurados (LRU, LFU, FIFO, MRU y Random), aplicándolos de forma coherente para gestionar la permanencia y sustitución de archivos en el almacenamiento local.
+
 # Recomendaciones
 
+1. Se recomienda mantener un formato uniforme para los headers y parámetros HTTP que maneja la caché, con el fin de asegurar coherencia entre los servicios y facilitar integraciones futuras.
 
+2. Es útil registrar los eventos relacionados con la validación del API-Key, especialmente cuando la clave es inválida o no está presente, para mejorar la trazabilidad y el control de seguridad.
+
+3. Se sugiere llevar un registro más detallado del proceso de validación del session_id, principalmente en casos de expiración o problemas con las cookies, para identificar con mayor claridad errores relacionados con las sesiones.
+
+4. Se recomienda monitorear el funcionamiento del TTL y las reglas de almacenamiento, incluyendo pruebas de carga, para verificar que el sistema mantenga un rendimiento estable cuando ocurren muchas expiraciones o reemplazos.
+
+5. Es conveniente analizar el rendimiento de cada algoritmo de reemplazo en distintos escenarios, con el fin de determinar cuál es el más adecuado según el tipo de archivo o el patrón de uso del sistema.
