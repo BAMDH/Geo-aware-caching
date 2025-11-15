@@ -25,7 +25,3 @@ dependencies:
   version: 1.0.0
   repository: "file://charts/zonal_cache"
   condition: zonal_cache.enabled
-- name: rest_api_node
-  version: 1.0.0
-  repository: "file://charts/rest_api_node"
-  condition: rest_api_node.enabled
