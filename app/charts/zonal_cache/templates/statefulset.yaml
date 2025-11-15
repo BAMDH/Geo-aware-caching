@@ -1,8 +1,9 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ .Values.name }}
 spec:
+  serviceName: "{{ .Values.name }}-service"
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -26,7 +27,7 @@ spec:
             - name: SERVICE_API_KEY
               value: "hoalksksa"
             - name: URL_LOGIN_VERCEL
-              value: http://localhost:5173/ #"http://api.prueba.com:32339/"
+              value: http://localhost:5173/
             - name: PORT
               value: "{{ .Values.service.port }}"
             - name: HOST_API

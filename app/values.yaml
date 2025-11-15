@@ -3,6 +3,6 @@ dns_interceptor:
 apache_server:
   enabled: true
 rest_api_simple:
-  enabled: false
+  enabled: true
 zonal_cache:
   enabled: true

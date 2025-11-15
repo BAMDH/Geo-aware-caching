@@ -6,5 +6,5 @@ image:
 
 service:
   type: NodePort
-  port: 3050
+  port: 80
   protocol: TCP

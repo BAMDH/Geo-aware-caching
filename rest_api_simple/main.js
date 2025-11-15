@@ -14,7 +14,7 @@ let nombres = [
 ];
 
 // GET - Obtener todos los nombres
-app.get('/get_all', (req, res) => {
+app.get('/', (req, res) => {
   res.json(nombres);
 });
 
