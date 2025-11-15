@@ -5,6 +5,19 @@
 // el api key del header 
 int extract_key_session(const char *buf, size_t len, const char* type, char *out, size_t out_size) {
 
+    printf("\n========== BUFFER RECIBIDO (%zu bytes) ==========\n", len);
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = buf[i];
+
+        if (c == '\r') printf("[\\r]");
+        else if (c == '\n') printf("[\\n]\n");
+        else if (c >= 32 && c <= 126) printf("%c", c);  // imprimible
+        else printf("[0x%02X]", c);                    // no imprimible
+    }
+
+    printf("\n========== FIN DEL BUFFER ==========\n\n");
+
     const char *prefix = NULL;
 
     if (strcmp(type, "api-key") == 0) {
