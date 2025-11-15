@@ -145,7 +145,7 @@ La UI es una aplicación web desarrollada con:
 - TailwindCSS
 - Asistencia de IA generativa
 
-Esta interfaz permite administrar dominios, URLs, políticas de cache y autenticación para las caches zonales.
+El acceso a las funcionalidades de la interfaz está asegurado mediante JSON Web Tokens (JWT) que se asignan cuando el usuario ingresa a la página.
 
 ---
 
@@ -158,6 +158,8 @@ Esta interfaz permite administrar dominios, URLs, políticas de cache y autentic
 ### 2. Administración de dominios
 - Crear y eliminar dominios.  
 - Verificación mediante registro TXT.  
+  - Para esto se eligió usar el servicio Duck DNS. Esta herramienta fue seleccionada luego de una investigación por su facilidad de uso e implementación.
+  - Para utilizar esta herramienta el usuario debe tener una cuenta creada en la página de [Duck DNS](https://www.duckdns.org/), crear el dominio que quiere para verificar que está disponible, luego de verificar que está disponible crearlo tanto en la página de duck como en la interfaz, y para realizar la verificación mediante registro TXT debe mandar el registro al [API que ofrece duck](https://www.duckdns.org/spec.jsp#:~:text=TXT%20Record%20API) con los datos que solicita
 - Gestión de metadatos asociados a cada dominio.
 
 ### 3. Administración de URLs
@@ -264,7 +266,59 @@ En las siguientes imágenes se observa cómo, al no contar con un session_id, el
 2. Con session id
 
 
+## UI
+Al correr la interfaz se muestra el login, si el usuario no está registrado ahí se muestra una opción donde puede registrarse.
+| Login | Registro | Registro exitoso |
+|----------|-----------|-----------|
+| ![](./images/login.png)  | ![](./images/registro.png)  | ![](./images/registroExitoso.png)  |
 
+Luego de iniciar sesión se lleva al usuario a un dashboard, si es la primera vez que entra este va a estar vacío, tal y como se muestra en la imagen:
+<div style="text-align: center;">
+    <img src="images/dashboard.png" alt="dashboard" width="80%">
+</div>
+
+Para la administración de dominios se tiene:
+1. Creación de dominio:
+
+| Creación dominio en Duck DNS | Creación de dominio en UI |
+|----------|-----------|
+| ![](./images/dominioDuck.png)  | ![](./images/dominioUI.png)  |
+
+| Creación registro TXT en Duck DNS | Verificación de registro TXT en UI |
+|----------|-----------|
+| ![](./images/dominioTxt.png)  | ![](./images/dominioUITxt.png)  |
+
+Si la creación es exitosa y se verificó el dominio con el registro TXT el dominio será mostrado en el dashboard con sus botones de acciones:
+<div style="text-align: center;">
+    <img src="images/dashboardActualizado.png" alt="dashboard" width="80%">
+</div>
+
+2. Administración de dominio:
+Al darle doble click al dominio se le lleva al usuario a la página de administración del dominio:
+<div style="text-align: center;">
+    <img src="images/domainAdmi.png" alt="dominio" width="80%">
+</div>
+
+2.1 Administración de urls:
+Ahora que el dominio está verificado el usuario puede crear urls para ese dominio:
+| Creación URL | Mensaje exito |
+|----------|-----------|
+| ![](./images/url.png)  | ![](./images/urlExito.png) |
+
+Cuando se crea un registro se actualiza la vista del detalle del dominio:
+<div style="text-align: center;">
+    <img src="images/urlAdmi.png" alt="url" width="80%">
+</div>
+
+Luego de que se crea un URL, según el tipo de autenticación que se le haya asignado ahora se le puede crear ya sea sus api-keys o userpass. En este caso se especificó que el URL tenía autenticación api-key:
+| Creación API-key | Mensaje exito |
+|----------|-----------|
+| ![](./images/urlApiKey.png)  | ![](./images/urlApiKeyExito.png) |
+
+Toda esta información se guarda en firebase con el siguiente formato:
+<div style="text-align: center;">
+    <img src="images/firebase.png" alt="bd" width="80%">
+</div>
 
 # Conclusiones
 
@@ -282,6 +336,14 @@ En las siguientes imágenes se observa cómo, al no contar con un session_id, el
 
 7. La Zonal Cache implementa correctamente los algoritmos de reemplazo configurados (LRU, LFU, FIFO, MRU y Random), aplicándolos de forma coherente para gestionar la permanencia y sustitución de archivos en el almacenamiento local.
 
+8. La API Node.js asegura la comunicación con las caches zonales y la UI mediante la autenticación de API Keys (para las caches) y JWT (para la UI), lo que establece una capa de seguridad esencial en el backend de configuración.
+
+9. La API Node.js cumple su función principal al proveer endpoints para gestionar la totalidad de las configuraciones (dominios, URLs, políticas de cache, TTLs, etc.) directamente en Firebase/Firestore, actuando como el único punto de entrada para modificar la lógica del sistema distribuido.
+
+10. La UI proporciona un flujo completo para el registro, login y manejo de sesiones mediante JWT, asegurando que solo los usuarios autenticados puedan acceder a las funcionalidades de administración.
+
+11. El proceso de verificación de dominio mediante registro TXT utilizando la API de Duck DNS es una solución práctica y funcional que demuestra la propiedad del dominio por parte del usuario, un requisito de seguridad clave para un sistema de cache.
+
 # Recomendaciones
 
 1. Se recomienda mantener un formato uniforme para los headers y parámetros HTTP que maneja la caché, con el fin de asegurar coherencia entre los servicios y facilitar integraciones futuras.
@@ -293,3 +355,10 @@ En las siguientes imágenes se observa cómo, al no contar con un session_id, el
 4. Se recomienda monitorear el funcionamiento del TTL y las reglas de almacenamiento, incluyendo pruebas de carga, para verificar que el sistema mantenga un rendimiento estable cuando ocurren muchas expiraciones o reemplazos.
 
 5. Es conveniente analizar el rendimiento de cada algoritmo de reemplazo en distintos escenarios, con el fin de determinar cuál es el más adecuado según el tipo de archivo o el patrón de uso del sistema.
+
+6. Implementar un registro de auditoría en la API que almacene quién (usuario JWT o API Key) y cuándo modificó una configuración clave (políticas de cache, TTLs) en Firebase, para mantener trazabilidad de los cambios.
+
+7. Para mejorar la experiencia del usuario y la seguridad, se recomienda implementar un mecanismo de refresco de tokens para evitar que el usuario deba iniciar sesión repetidamente mientras administra el sistema, actualmente estos tienen un límite de una hora.
+
+8. La verificación de dominio vía Duck DNS debería ser un proceso asíncrono y no bloquear la UI.
+
