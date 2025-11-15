@@ -1,5 +1,4 @@
 #include "cache.h"
-
 //convierte mb y kb a bytes
 long convertir_a_bytes(const char *size) {
     if (!size) return -1;
@@ -79,7 +78,7 @@ cJSON *get_config_json(const char *dominio) {
 }
 
 // Crea la configuracion inicial del dominio
-bool set_subconfig(const char *dominio, const char *subdominio, const char *size,  const char *type, char **file_types, int ftsize) {
+bool set_subconfig(const char *dominio, const char *subdominio, const char *size,  const char *type, char **file_types, int ftsize,const char *ip) {
     size_t len_total = strlen(dominio) + strlen(subdominio) + 2;
     char *path = malloc(len_total);
 
@@ -109,7 +108,8 @@ bool set_subconfig(const char *dominio, const char *subdominio, const char *size
 
 
     cJSON_AddNumberToObject(root, "total_size", convertir_a_bytes(size));
-    cJSON_AddStringToObject(root, "type", type); 
+    cJSON_AddStringToObject(root, "type", type);
+    cJSON_AddStringToObject(root, "ip", ip);  
     cJSON *ftarray = cJSON_CreateArray();
     for (int i = 0; i < ftsize; i++) {
         cJSON_AddItemToArray(ftarray, cJSON_CreateString(file_types[i]));
@@ -138,7 +138,6 @@ bool set_subconfig(const char *dominio, const char *subdominio, const char *size
 bool set_config(const char *json_str) {
     cJSON *root = cJSON_Parse(json_str);
     cJSON *domain = cJSON_GetObjectItem(root, "domain");
-    cJSON *cacheLimit = cJSON_GetObjectItem(root, "cacheLimit");
     cJSON *urls = cJSON_GetObjectItem(root, "urls");
     int url_count = cJSON_GetArraySize(urls);
     for (int i = 0; i < url_count; i++) {
@@ -158,7 +157,7 @@ bool set_config(const char *json_str) {
                 fileTypesArray[i] = strdup(ft->valuestring);
             }
         }
-        set_subconfig(domain->valuestring,url->valuestring,cacheSize->valuestring,replacementPolicy->valuestring,fileTypesArray,size);
+        set_subconfig(domain->valuestring,url->valuestring,cacheSize->valuestring,replacementPolicy->valuestring,fileTypesArray,size,ip->valuestring);
         for (int i = 0; i < size; i++) free(fileTypesArray[i]);
         free(fileTypesArray);
     }
@@ -257,10 +256,6 @@ bool compatibility(const char *dominio, const char *filename) {
     return found;
 }
     
-
-   
-
-
 
 // borra archivo en disco
 bool delete_file(const char *dominio,const char *filename){
@@ -501,7 +496,7 @@ static size_t write_callback(void *contents, size_t size, size_t nmemb, void *us
 }
 
 //obtiene el archivo del enlace
-ArchivoInfo *get_file_from_url(const char *filename, const char *url) {
+ArchivoInfo *get_file_from_url(const char *filename, const char *filepath, const char *ip,const char *domain,const char *subdomain) {
     CURL *curl;
     CURLcode res;
 
@@ -513,27 +508,40 @@ ArchivoInfo *get_file_from_url(const char *filename, const char *url) {
     info->size = 0;
 
     curl = curl_easy_init();
-    if (!curl) {
-        fprintf(stderr, "Error inicializando libcurl.\n");
-        free(info);
-        return NULL;
+    if(!curl) return NULL;
+    if (strncmp(ip, "10.1.1", 6) == 0 ) {
+
+        char url3[256];
+        snprintf(url3, sizeof(url3), "http://%s:80",ip);
+        
+
+        curl_easy_setopt(curl, CURLOPT_URL, url3);
+    } else {
+        char url2[256];
+        snprintf(url2, sizeof(url2), "https://%s.%s%s",subdomain, domain,filepath);
+        printf("URL construida: %s\n", url2);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url2);
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)info);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); 
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L); 
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+
+
     res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
+    if(res != CURLE_OK) {
         fprintf(stderr, "Error al descargar: %s\n", curl_easy_strerror(res));
         curl_easy_cleanup(curl);
         free(info->contenido);
         free(info);
         return NULL;
     }
+
+    
 
     curl_easy_cleanup(curl);
     return info;
@@ -569,21 +577,38 @@ char *get_file_content(const char *dominio, const char *filename) {
     return buffer;
 }
 
+//devuelve ip
+char *get_ip(const char *dominio) {
+    cJSON *root = get_config_json(dominio);
+    if (!root) return NULL;
+
+    cJSON *ip_field = cJSON_GetObjectItem(root, "ip");
+    char *ip_copy = NULL;
+    ip_copy = strdup(ip_field->valuestring); 
+
+
+    cJSON_Delete(root);
+
+    return ip_copy;  // ← devuelve la IP o NULL
+}
+
+
 //devuelve el archivo pedido
 char *get_file(const char * dominio,const char * subdominio,const char *url){
     srand(time(NULL));
     size_t len_total = strlen(dominio) + strlen(subdominio) + 2;
     char *path = malloc(len_total);
     snprintf(path, len_total, "%s.%s", subdominio,dominio);
-    const char *filename = strrchr(url, '/');
+    const char *ip = get_ip(path);
     char *content ="";
+    const char *filename = strrchr(url, '/');
     filename++;
-    if ((strcmp(filename, dominio) == 0)||(strcmp(filename, path) == 0)){
+    if ((strcmp(filename, dominio) == 0)||(strcmp(filename, path) == 0)||strcmp(filename, "") == 0){
         filename = "index.html";
     }
     bool comp = compatibility(path, filename);
     if (!comp || !file_exists(path,filename)){
-        ArchivoInfo *info = get_file_from_url(filename, url);
+        ArchivoInfo *info = get_file_from_url(filename, url,ip,dominio,subdominio);
         if(comp){
             add_file(path, info->filename, info->contenido, info->size); 
         } else{
@@ -596,11 +621,10 @@ char *get_file(const char * dominio,const char * subdominio,const char *url){
         free(info->contenido);
         free(info); 
     }
-
     if(comp){
         content = get_file_content(path,filename);
     }
-    content =base64_encode((const unsigned char *)content, strlen(content));
+    //content =base64_encode((const unsigned char *)content, strlen(content)):
     free(path);
     return content;
 }

@@ -24,7 +24,8 @@ long convertir_a_bytes(const char *size);
 
 // --- Configuración de cache ---
 bool set_config(const char *json_str);
-bool set_subconfig(const char *dominio, const char *subdominio, const char *size, const char *type, char **file_types, int ftsize);
+bool set_subconfig(const char *dominio, const char *subdominio, const char *size,  const char *type, char **file_types, int ftsize,const char *ip);
+
 cJSON *get_config_json(const char *dominio);
 void save_config_json(const char *dominio, cJSON *root);
 bool is_enough_space(const char *dominio, long file_size);
@@ -51,7 +52,9 @@ cJSON* LFU(cJSON *files, int total_files, int *index);
 cJSON* MRU(cJSON *files, int total_files, int *index);
 
 // --- Descarga de archivos ---
-ArchivoInfo *get_file_from_url(const char *dominio, const char *url);
+ArchivoInfo *get_file_from_url(const char *filename, const char *filepath,
+                               const char *ip, const char *domain, const char *subdomain);
+
 
 // --- Utilidades ---
 time_t parse_fecha(const char *fecha);
