@@ -6,3 +6,5 @@ rest_api_simple:
   enabled: false
 zonal_cache:
   enabled: true
+rest_api_node:
+  enabled: true

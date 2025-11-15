@@ -1,0 +1,12 @@
+name: rest-api-node
+replicas: 1
+image:
+  repository: vmrjoselyn/rest-api-node
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: NodePort
+  nodePort: 30090
+  port: 3000
+  protocol: TCP
