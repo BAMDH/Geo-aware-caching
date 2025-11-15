@@ -4,7 +4,7 @@ import Dialog from "./Dialog";
 import CustomForm from "./Form"
 
 const LOGIN_ACCESS_ENDPOINT = "http://localhost:3000/domain/auth";
-const CACHE_REDIRECT_URL = "http://localhost:80";
+const CACHE_REDIRECT_URL = "http://";
 
 const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false)
@@ -55,7 +55,7 @@ const LoginPage = () => {
             });
 
             if (response.ok) {
-                window.location.replace(`${CACHE_REDIRECT_URL}?domain=${cacheDomain}&subdomain=${cacheUrlPattern}`);
+                window.location.replace(`${CACHE_REDIRECT_URL}${cacheUrlPattern}.${cacheDomain}`);
             } else {
                 const result = await response.json();
                 const errorMessage = result.message || result.error || "El inicio de sesión ha fallado.";
