@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import Dialog from "./Dialog";
 import CustomForm from "./Form"
 
-const LOGIN_ACCESS_ENDPOINT = "/domain/auth";
+const LOGIN_ACCESS_ENDPOINT = "http://localhost:3000/domain/auth";
 const CACHE_REDIRECT_URL = "http://localhost:80";
 
 const LoginPage = () => {
