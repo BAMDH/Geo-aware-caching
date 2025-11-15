@@ -84,8 +84,11 @@ char* call_api(params_t *params, const char* endpoint) {
 
         char auth_client_header[128];
 
+        printf("El params session id es  %s\n", params->session_id);
+        fflush(stdout);
+
         // Caso para enviar api key
-        if (params->session_id != '\0'){
+        if (params->session_id[0] != '\0'){
             snprintf(url, sizeof(url), "http://%s:%s/domain/validate/session_id?domain=%s&subdomain=%s",
                     HOST_API, PORT_API, params->domain, params->subdomain);
             
@@ -96,11 +99,18 @@ char* call_api(params_t *params, const char* endpoint) {
 
         // Caso para enviar session id
         else{
+
             snprintf(url, sizeof(url), "http://%s:%s/domain/validate/api_key?domain=%s&subdomain=%s",
                     HOST_API, PORT_API, params->domain, params->subdomain);
             snprintf(auth_client_header, sizeof(auth_client_header), 
                         "client-api-key: %s", params->api_key);
             headers = curl_slist_append(headers, auth_client_header);
+
+            printf("El url a llamar es %s\n", url);
+            fflush(stdout);
+
+            printf("El param api key es %s\n", params->api_key);
+            fflush(stdout);
 
         }
 

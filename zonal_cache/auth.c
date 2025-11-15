@@ -7,9 +7,9 @@ int extract_key_session(const char *buf, size_t len, const char* type, char *out
 
     const char *prefix = NULL;
 
-    if (strcmp(type, "x-api-key") == 0) {
-        prefix = "x-api-key:";
-    } else if (strcmp(type, "session_id") == 0) {
+    if (strcmp(type, "api-key") == 0) {
+        prefix = "api-key:";
+    } else if (strcmp(type, "userpass") == 0) {
         prefix = "Cookie:";
     } else {
         printf("[extract_key_session] Tipo no soportado: %s\n", type);

@@ -8,6 +8,7 @@ service:
   type: NodePort
   port: 8080
   protocol: TCP
+  nodePort: 31950
 
 resources:
   limits:

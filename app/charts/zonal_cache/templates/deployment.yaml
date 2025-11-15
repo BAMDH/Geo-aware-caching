@@ -24,13 +24,13 @@ spec:
               protocol: {{ .Values.service.protocol }}
           env:
             - name: SERVICE_API_KEY
-              value: "prueba"
+              value: "hoalksksa"
             - name: URL_LOGIN_VERCEL
               value: "http://api.prueba.com:32339/"
             - name: PORT
               value: "{{ .Values.service.port }}"
             - name: HOST_API
-              value: "127.0.0.1"
+              value: "host.docker.internal"
             - name: PORT_API
               value: "3000"
 

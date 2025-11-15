@@ -84,18 +84,24 @@ void* handle_client(void* arg) {
     printf("El domain obtenido es de %s\n", params.domain);
     fflush(stdout);
 
-    //response_api = call_api(params, "domain/type_auth"); 
+    response_api = call_api(&params, "domain/type_auth"); 
+
+    printf("El response de api es %s\n", response_api);
+    fflush(stdout);
     
-    //parse_host_json(response_api, &params); 
+    parse_host_json(response_api, &params); 
+
+    printf("El domain %s, subdomain %s y auth %s obtenido\n", params.domain, params.subdomain, params.type_auth);
+    fflush(stdout);
     
     // endpoint recibe domain 
-    //response_api = call_api(params, "domain/config"); 
+    response_api = call_api(&params, "domain/config"); 
     
     // funcion de brandon, enviar config de la api 
     //set_config(response_api);
 
-    strncpy(params.type_auth, "session_id", TYPE_AUTH - 1);
-    params.type_auth[TYPE_AUTH - 1] = '\0';
+    //strncpy(params.type_auth, "session_id", TYPE_AUTH - 1);
+    //params.type_auth[TYPE_AUTH - 1] = '\0';
 
     if (params.type_auth[0] == '\0') {
 
@@ -104,14 +110,14 @@ void* handle_client(void* arg) {
             "Content-Length: %zu\r\n"
             "Content-Type: text/plain\r\n"
             "\r\n"
-            "Error: host no encontrado\n",
-            strlen("Error: host no encontrado\n")
+            "Error: Domain no encontrado\n",
+            strlen("Error: Domain no encontrado\n")
         );
 
-    } else if (strcmp(params.type_auth, "x-api-key") == 0) {
+    } else if (strcmp(params.type_auth, "api-key") == 0) {
 
         key_session = extract_key_session(
-            targ->buffer, targ->len, "x-api-key",
+            targ->buffer, targ->len, "api-key",
             params.api_key, API_KEY_SIZE
         );
 
@@ -120,7 +126,7 @@ void* handle_client(void* arg) {
 
     } else {
         key_session = extract_key_session(
-            targ->buffer, targ->len, "session_id",
+            targ->buffer, targ->len, "userpass",
             params.session_id, SESSION_ID_SIZE
         );
 
@@ -133,7 +139,7 @@ void* handle_client(void* arg) {
         printf("Se va a redirigir a vercel\n");
         fflush(stdout);
 
-        if (strcmp(params.type_auth, "x-api-key") == 0) {
+        if (strcmp(params.type_auth, "api-key") == 0) {
 
             snprintf(response, sizeof(response),
                 "HTTP/1.1 401 Unauthorized\r\n"
@@ -146,13 +152,19 @@ void* handle_client(void* arg) {
 
         } else {
 
+            char url_with_params[512]; // buffer separado
+
+            snprintf(url_with_params, sizeof(url_with_params),
+                    "%s?domain=%s&subdomain=%s",
+                    url_login_vercel, params.domain, params.subdomain);
+
             snprintf(response, sizeof(response),
                 "HTTP/1.1 302 Found\r\n"
                 "Location: %s\r\n"
                 "Content-Length: 0\r\n"
                 "Connection: close\r\n"
                 "\r\n",
-                url_login_vercel
+                url_with_params
             );
         }
 
@@ -166,7 +178,22 @@ void* handle_client(void* arg) {
 
                 ip_service = call_api(&params, "domain/ip");
 
+                printf("El ip del dominio es %s\n", ip_service);
+                fflush(stdout);
+
                 // Aquí se llama al servicio, web o api
+
+                // PARTE DE BRANDON
+
+                snprintf(response, sizeof(response),
+                "HTTP/1.1 200 FUNCIONA BIEN\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: %zu\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "Mensaje: funciona\n",
+                strlen("Mensaje: funciona\n")
+            );
 
             }
 
